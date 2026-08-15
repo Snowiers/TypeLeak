@@ -11,14 +11,34 @@ Observation only — nothing here modifies the audio stream.
 ```
 pip install -r requirements.txt
 
-python -m exposure                 # serve fake events on ws://localhost:8765
-python -m exposure --dump 40       # print 40 events as JSONL, no websockets needed
-python -m exposure --seed 42       # reproducible fake stream
+python -m exposure                    # fake events on ws://localhost:8765
+python -m exposure --source replay    # deterministic playback, for rehearsal
+python -m exposure --dump 40          # print 40 events as JSONL, no websockets needed
+python -m exposure --list-sources     # what is available and when to use it
 python -m unittest discover -s tests
 ```
 
-`fixtures/sample_events.jsonl` is 60 pre-generated events, committed so the frontend
-can be built against a static file with no Python running at all.
+`fixtures/sample_events.jsonl` is 200 pre-generated events spanning about 65 seconds of
+realistic typing rhythm, committed so the frontend can be built against a static file
+with no Python running at all.
+
+### Sources, and the degradation switch
+
+| `--source` | Behaviour |
+|---|---|
+| `fake` | Randomised. Different every run. Development default |
+| `replay` | Deterministic playback of a JSONL file. Same alerts, same moments, every run |
+| `classifier` | The real model side. Not wired up yet |
+
+`replay` is demo insurance. Rehearsing against `fake` means practising over a stream
+you have never seen; `replay` lets you learn where the alerts land. When the real
+classifier is wired in, falling back mid-demo is a flag rather than a code edit.
+
+Useful replay options: `--fixture PATH`, `--speed 2.0`, `--no-loop`.
+
+Replay reconstructs upstream predictions and runs them through the live risk and alert
+code, rather than replaying frozen verdicts. A threshold change is therefore visible in
+replay instead of being baked into the recording.
 
 ## For the frontend
 
@@ -96,8 +116,34 @@ Prediction(
 )
 ```
 
-Then implement `EventSource` — an async iterator yielding those — and construct
-`EventServer` with it instead of `FakeSource`. Nothing else changes.
+Two ready-made adapters in `classifier.py`, both already tested. Pick whichever fits
+the shape of your code; nothing downstream changes either way.
+
+**You push** (best fit if you own a running capture loop):
+
+```python
+from exposure.classifier import QueueSource
+from exposure.server import EventServer
+
+source = QueueSource()
+server = EventServer(source)          # instead of FakeSource()
+
+# from your audio loop, any thread:
+source.submit(Prediction(key_topk=topk, speech_present=vad_flag))
+```
+
+**We pull** (best fit if your code is request-shaped):
+
+```python
+from exposure.classifier import CallableSource
+
+source = CallableSource(your_async_function)   # returns Prediction, or None to stop
+```
+
+`QueueSource` bounds its backlog at 256 and drops the oldest prediction under
+pressure — for a live exposure monitor a stale keystroke is worth less than a current
+one, and an unbounded queue would eventually take the process down mid-demo. Check
+`source.dropped` if throughput looks suspicious.
 
 `timestamp` should be stamped at onset detection, not at handoff. Arrival time drifts
 by however long inference took, which is exactly the latency the demo is about.
@@ -112,6 +158,8 @@ by however long inference took, which is exactly the latency the demo is about.
 | `alert.py` | Risk + typing → `alert`, `alert_severity`. The two tuning constants live here |
 | `event.py` | Both seams: `Prediction` in, `AudioEvent` out |
 | `source.py` | `EventSource` interface plus `FakeSource` |
+| `replay.py` | Deterministic playback from a JSONL file |
+| `classifier.py` | `QueueSource` and `CallableSource` — where the model side plugs in |
 | `state.py` | Latch and bounded alert log |
 | `server.py` | Websocket transport |
 

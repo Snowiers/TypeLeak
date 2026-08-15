@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import random
+import time
 from collections.abc import AsyncIterator
 from typing import Protocol
 
@@ -67,18 +68,44 @@ class FakeSource:
                 await asyncio.sleep(self._rng.uniform(*self._keystroke_delay))
             await asyncio.sleep(self._rng.uniform(*self._pause_delay))
 
-    def sample(self, count: int, *, speech_present: bool | None = None) -> list[Prediction]:
-        """Return `count` Predictions synchronously, for tests and fixture dumps."""
-        return [
-            self._one_prediction(
+    def sample(
+        self,
+        count: int,
+        *,
+        speech_present: bool | None = None,
+        start_time: float | None = None,
+    ) -> list[Prediction]:
+        """Return `count` Predictions synchronously, for tests and fixture dumps.
+
+        Timestamps follow the same burst-and-pause rhythm the async stream produces,
+        advanced against a virtual clock rather than real sleeping. Without this a
+        dumped fixture lands entirely within one millisecond, which makes it useless
+        for replay and misleading for anyone building a UI against it.
+        """
+        clock = time.time() if start_time is None else start_time
+        predictions: list[Prediction] = []
+        remaining_in_burst = 0
+        speech_for_burst = False
+
+        for _ in range(count):
+            if remaining_in_burst == 0:
+                remaining_in_burst = self._rng.randint(*self._burst_length)
+                speech_for_burst = self._rng.random() < self._speech_probability
+                if predictions:
+                    clock += self._rng.uniform(*self._pause_delay)
+            else:
+                clock += self._rng.uniform(*self._keystroke_delay)
+
+            prediction = self._one_prediction(
                 speech_present=(
-                    self._rng.random() < self._speech_probability
-                    if speech_present is None
-                    else speech_present
+                    speech_for_burst if speech_present is None else speech_present
                 )
             )
-            for _ in range(count)
-        ]
+            prediction.timestamp = clock
+            predictions.append(prediction)
+            remaining_in_burst -= 1
+
+        return predictions
 
     def _one_prediction(self, *, speech_present: bool) -> Prediction:
         regime = self._rng.choices(

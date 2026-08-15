@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.pytest_cache/
+.idea/
+.vscode/
+
+# Recordings and datasets are large and belong to the model side, not the repo.
+labeled_dataset/
+*.wav
