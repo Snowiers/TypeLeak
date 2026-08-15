@@ -2,9 +2,9 @@
 
 ## Read this first
 
-This is a hackathon project with roughly 32 hours remaining, including sleep. The team is
-working in parallel against fixed interface contracts, split across whichever people end up
-owning which piece.
+This is a hackathon project with roughly 32 hours remaining, including sleep. Started
+2026-08-15. The team is working in parallel against fixed interface contracts, split across
+whichever people end up owning which piece.
 
 **Do not write implementation code until explicitly asked.** When we start a task, first
 confirm you understand the relevant contract below, ask about anything ambiguous, then
@@ -14,7 +14,10 @@ Bias toward **small, working, testable pieces** over complete-but-untested syste
 degraded feature that runs beats a complete feature that doesn't.
 
 Work is not yet split among the team. This file describes the system, not who owns which
-part.
+part. One known boundary: **audio capture, conditioning, and classification are owned by a
+teammate on the model side.** Everything downstream of the emitted audio event — risk, alert
+decision, transport, frontend — is on this side of the seam. The seam may still move; keep
+the coupling to the event schema, not to anyone's internals.
 
 ---
 
@@ -60,19 +63,20 @@ harder to get away with.
 ### The architectural rule that makes this trustworthy
 
 **The alert decision must never depend on the attack twin having successfully transcribed the
-content.** Knowing "this typing is exploitable" does not require actually reading the password
-— the alert should fire on the *existence and strength* of an exploitable acoustic signal, not
-on a successful decode. The alert trigger is built from two things, both independent of
-transcription content:
+content.** Knowing "this typing is exploitable" does not require actually reading what was
+typed — the alert fires on the *existence and strength* of an exploitable acoustic signal, not
+on a successful decode.
 
-1. Is there acoustically identifiable typing signal at all, and how strong/clean is it (a risk
-   score, not a transcript)
-2. Is a sensitive input field currently focused (the context signal, from an OS-level hook,
-   never derived from audio content)
+This version has no context signal (see Explicitly out of scope), so the alert rests on one
+input: **a risk score describing whether there is acoustically identifiable typing signal at
+all, and how strong and clean it is.** A risk score, never a transcript.
 
-These two signals feed the alert decision. The attack twin's transcription output is a
-*separate* branch off the same raw audio, shown to the user as the proof panel — it is never
-an input to whether an alert fires. Do not let this separation blur during implementation.
+The line between the risk score and the transcript is about *content versus statistics*. The
+risk score may consume the shape of the classifier's output distribution — top-1 margin,
+entropy, onset strength. It must never consume the predicted key identity or any decoded text.
+The attack twin's transcription output is a *separate* branch off the same raw audio, shown to
+the user as the proof panel — it is never an input to whether an alert fires. Do not let this
+separation blur during implementation.
 
 ---
 
@@ -81,53 +85,40 @@ an input to whether an alert fires. Do not let this separation blur during imple
 These are frozen. Changing one requires agreement from everyone it affects. Code against the
 contract, not against another person's internals.
 
-### Context signal (cross-platform, one interface, per-OS backends)
-
-There is no single mechanism that detects "a sensitive field is focused" identically across
-macOS, Windows, and Linux — the underlying OS APIs are genuinely different (Accessibility API
-on macOS, UI Automation on Windows, AT-SPI/X11 on Linux, and Wayland in particular is often
-restrictive about this kind of introspection). The fix is one common interface with backends
-selected per platform, plus a manual fallback so the demo never breaks on a platform quirk.
-
-```
-get_context()  →
-  {
-    "sensitive_field": bool,
-    "app_name": str,
-    "confidence": float,
-    "source": "accessibility" | "uia" | "atspi" | "manual_fallback"
-  }
-```
-
-Only build a real backend for whichever OS you are actually demoing on. Stub the others to
-return `source: "manual_fallback"`. The manual fallback is a hotkey or on-screen toggle a team
-member presses during the demo to simulate "sensitive field focused" — this must exist and
-work regardless of whether the real OS hook is finished, because a live demo cannot depend on
-an OS accessibility permission dialog behaving correctly on stage.
-
 ### Audio event (backend classifier → frontend, single schema serves both panels)
 
 Emitted over a local websocket, one event per detected keystroke:
 
 ```
 {
-  "type":         "keystroke",
-  "key_top1":     str,
-  "key_topk":     [[key, prob], ...],
-  "confidence":   float,
-  "timestamp":    float,
-  "mode":         "normal" | "password",
-  "risk_score":   float,
-  "alert":        bool,
-  "alert_severity": "none" | "moderate" | "critical"
+  "type":            "keystroke",
+  "key_top1":        str,
+  "key_topk":        [[key, prob], ...],
+  "confidence":      float,     // 0-1, classifier top-1 probability == key_topk[0][1]
+  "timestamp":       float,
+  "mode":            "normal",  // always "normal" in this version, see below
+  "risk_score":      float,     // 0-1 exposure estimate, distribution shape only
+  "typing_detected": bool,
+  "speech_present":  bool,      // from VAD; false if the model side does not surface it
+  "alert":           bool,
+  "alert_severity":  "none" | "moderate" | "critical"
 }
 ```
 
-`mode` reflects the context signal at the time of the event and determines which correction
-strategy the transcript panel should be displaying (see Language model correction below).
-`alert` and `alert_severity` describe whether this event crossed the alert threshold and how
-seriously. There is no `action` field and no audio modification anywhere in this schema — the
-system observes and reports, it does not act on the audio stream.
+`confidence` is the classifier's own top-1 probability. `risk_score` is the independent
+exposure estimate — how exploitable this acoustic signal is — and is what the alert decision
+consumes. They are different numbers and must not be conflated in code or in the UI.
+
+`mode` is retained in the schema but is always `"normal"` in this version, since there is no
+context signal and no password mode. Do not delete the field; a future version needs it.
+
+`typing_detected` and `speech_present` are explicit rather than inferred from `alert_severity`,
+because the alert panel has to show *why* an alert fired and severity alone is lossy. If the
+model side does not surface VAD output, `speech_present` is `false` and the panel labels it
+unknown rather than silently claiming silence.
+
+There is no `action` field and no audio modification anywhere in this schema — the system
+observes and reports, it does not act on the audio stream.
 
 ### Training data format
 
@@ -145,7 +136,7 @@ target is the single easiest way to run out of time before anything works end to
 
 ## Pipeline mechanics
 
-### Audio conditioning (shared by both the transcript and alert branches)
+### Audio conditioning (owned by the model side)
 
 Raw mic buffer in, cleaned keystroke-relevant segments out. This does not need to be a
 learned separation model — keystrokes are impulsive, broadband, short transients; speech is
@@ -153,8 +144,8 @@ continuous and harmonic; most background noise is spectrally stationary. That di
 exploitable with standard DSP:
 
 1. **Voice activity detection** flags speech-present frames — a fast, existing VAD component
-   (not custom-trained), used both to help isolate keystroke energy and as context for the
-   alert severity (see below).
+   (not custom-trained), used both to help isolate keystroke energy and to populate
+   `speech_present` on the event.
 2. **Spectral subtraction / noise gating** against an estimated noise floor removes
    stationary background noise.
 3. **Onset detection** (spectral flux or high-frequency content) finds keystroke-like
@@ -163,79 +154,94 @@ exploitable with standard DSP:
 A learned source-separation model is a legitimate stretch goal, not a requirement. Do not
 attempt it before the DSP pipeline above is working end to end.
 
-### Classification and correction
+### Classification
 
 Per-keystroke log-mel spectrogram, plus inter-keystroke timing as an auxiliary feature, into
 a classifier. Fine-tune rather than hand-roll where possible — using a real NVIDIA-ecosystem
 component here (rather than a bespoke CNN) matters for how this project is scored, not just
 how it performs.
 
-**Correction is mode-dependent, and this is a deliberate design choice, not an afterthought:**
+**No correction of any kind in this version.** No dictionary, no language model, no
+keyboard-adjacency prior. The transcript panel shows the raw per-key stream, with the
+correction column present but passthrough and visibly labeled as such. Rationale: correction
+was only ever justified as mode-dependent, and without a context signal there is no mode to
+depend on. Reserving the column keeps re-enabling it a one-place change rather than a layout
+rebuild.
 
-- `mode: "normal"` — full dictionary/language-model correction. Passwords are not English
-  words; general typed text is. This is where the readable transcript comes from.
-- `mode: "password"` — **no dictionary correction.** Running word-level correction on a
-  password actively produces a wrong but plausible-looking result, which is worse than no
-  correction at all. Use, at most, a keyboard-adjacency prior (some key transitions are
-  physically faster/more common than others, independent of language) — not a word dictionary.
-
-The transcript panel should visibly show which mode is active. Do not silently apply the same
-correction strategy regardless of context — that is the single most avoidable accuracy and
-credibility mistake this project could make.
+**If correction is ever turned back on, it comes back mode-aware, not global.** Word-level
+correction applied to a password produces a wrong but plausible-looking result, which is worse
+than no correction at all. That constraint outlives this version.
 
 ### Risk and alert decision
 
-Combines the classifier's confidence/entropy on the current audio with the context signal to
-produce a risk score, then an alert severity. Whether the risk score is a genuinely separate
-small model or computed directly from classifier output statistics is an open decision — see
-Open decisions below.
+The risk score is **computed directly from the attack-twin classifier's output statistics** —
+top-1 margin over top-2, plus normalized entropy — not from a separate model. Decision made
+deliberately: a separate model needs its own labels, which do not exist and cannot be
+collected before the +20h gate. Documented here as the resolution of a previously open
+decision.
 
-**Alert severity table** (speech presence comes from the VAD in audio conditioning, not from
-whether words were successfully transcribed):
+The risk score consumes distribution shape only. It never reads `key_top1`, `key_topk` key
+identities, or any decoded text — see the architectural rule above.
 
-| Speech present | Typing detected | Risk above threshold | Sensitive field | Alert |
-|---|---|---|---|---|
-| — | No | — | — | none |
-| — | Yes | No | — | none, log only |
-| Yes or No | Yes | Yes | No | moderate |
-| Yes or No | Yes | Yes | Yes | critical |
+**Alert severity table.** Severity is bound to two thresholds on the risk score. Speech
+presence comes from the VAD, not from whether words were successfully transcribed, and does
+not suppress the alert.
+
+| Typing detected | Risk score | Speech present | Alert |
+|---|---|---|---|
+| No | — | — | none |
+| Yes | below `risk_threshold` | — | none, log only |
+| Yes | above `risk_threshold` | Yes or No | moderate |
+| Yes | above `critical_threshold` | Yes or No | critical |
 
 Speech presence does not suppress the alert the way it would have suppressed a mitigation
 action — the point of this system is to tell the truth about exposure regardless of what else
 is happening in the audio. If typing is acoustically exploitable while someone is also
 talking, that is still worth surfacing, arguably more so.
 
-One sensitivity setting, not several: **risk threshold** — how confident the exposure signal
-needs to be before an alert fires at all. Keep this simple; there is no masking aggressiveness
-knob in this version because there is no masking.
+Two constants, both on the same axis: **`risk_threshold`** (how confident the exposure signal
+must be before an alert fires at all) and **`critical_threshold`** (above which exposure is
+severe). The severity axis is "how exploitable," purely acoustic. There is no masking
+aggressiveness knob in this version because there is no masking.
 
 ### Alerting
 
 This is the product. Every alert-worthy event should be visible immediately, with enough
-detail to be self-explanatory: what was detected, how confident, whether a sensitive field was
-focused, and when. A running log of recent alerts, plus a live "currently exposed" indicator
-during active typing, is the core deliverable — treat it with the same priority as the
-classifier itself, not as an add-on.
+detail to be self-explanatory: what was detected, how confident, the risk score, whether
+speech was present, and when. A running log of recent alerts, plus a live "currently exposed"
+indicator during active typing, is the core deliverable — treat it with the same priority as
+the classifier itself, not as an add-on.
+
+The "currently exposed" indicator **latches**. No event is emitted when typing stops, so the
+indicator stays lit until manually cleared with `Ctrl+Shift+X`, active only while the frontend
+window has focus. No global OS hotkey — nothing to break on stage.
 
 ---
 
 ## Frontend
 
-One websocket event stream (see Audio event above), three panels. Build in this order — each
-is independently useful, so stopping partway still leaves something demoable:
+Vanilla HTML/CSS/JS, no framework, no build step. Websocket client to `ws://localhost:8765`,
+configurable. A build toolchain is pure risk at hour zero; this is reversible if it becomes
+limiting.
 
-1. **Transcript panel.** Raw per-key stream and mode-dependent corrected text, side by side,
-   with a visible label showing which correction mode is active. This is the proof that
-   detection works — build this first.
-2. **Alert panel.** Live "currently exposed" indicator plus a scrolling log of past alerts
-   with severity and reasoning. This is the actual deliverable — it directly answers "why
-   does this matter" for anyone watching the demo.
+The event source is swappable behind one interface: a fake generator now, the real websocket
+later. Nothing in the panels couples to anything but the event schema above.
+
+One event stream, three panels. Build in this order — each is independently useful, so
+stopping partway still leaves something demoable:
+
+1. **Transcript panel.** Two columns: raw per-key stream on the left, corrected text on the
+   right. Correction is off, so the right column is passthrough and labeled as such, with the
+   mode indicator showing `normal`. This is the proof that detection works — build this first.
+2. **Alert panel.** Live latched "currently exposed" indicator plus a scrolling log of past
+   alerts with severity and reasoning. This is the actual deliverable — it directly answers
+   "why does this matter" for anyone watching the demo.
 3. **3D keyboard visualization.** Stylized, not realistic — simple box geometry per key in a
-   grid, using three.js. On each event, flash the predicted key with opacity scaled to
-   confidence. This is demo polish, not something any judging criterion strictly requires.
-   If time runs short, degrade to a flat 2D HTML/CSS key grid that does the same job with a
-   fraction of the build effort — this degradation path should be assumed from the start, not
-   discovered under time pressure.
+   grid, using three.js loaded as a local file. On each event, flash the predicted key with
+   opacity scaled to confidence. This is demo polish, not something any judging criterion
+   strictly requires. If time runs short, degrade to a flat 2D HTML/CSS key grid that does the
+   same job with a fraction of the build effort — this degradation path should be assumed from
+   the start, not discovered under time pressure.
 
 All three panels can and should be built against hand-written fake events before the backend
 pipeline is finished. Do not let frontend work block on backend completion.
@@ -254,6 +260,10 @@ a genuine estimate of how exploitable that typing was.
 Report it as a concrete comparison: risk score vs. measured transcription accuracy across a
 held-out set of samples.
 
+**This requires deliberately collecting low-risk samples** — noisy audio, distant mic, speech
+over typing — not only clean ones. A held-out set of uniformly clean samples produces a single
+cluster on the plot and proves nothing. Plan the bad audio during data collection, not after.
+
 ---
 
 ## Constraints and conventions
@@ -266,9 +276,12 @@ Never on a stranger's audio, never on anyone's pre-recorded typing without their
 ducking, masking, or any other change to the audio stream, even as a "quick" addition —
 that is a different project and is explicitly out of scope here (see below).
 
-**Demo reliability over cleverness.** The manual context-signal fallback must work reliably
-before any stretch goal is attempted. A judge watching a live demo will remember a broken OS
-hook far more than they'll credit an ambitious feature that almost worked.
+**No OS-specific code.** With the context signal cut, nothing in this system touches platform
+APIs. It is cross-platform by virtue of not needing to be.
+
+**Demo reliability over cleverness.** A judge watching a live demo will remember a broken
+component far more than they'll credit an ambitious feature that almost worked. Every stage
+must have a working degraded path before any stretch goal is attempted.
 
 **NVIDIA ecosystem.** Prefer a real NeMo audio model for the classifier over a hand-rolled
 CNN — this is both a technical-quality choice and a scoring one. Local, on-device inference
@@ -284,20 +297,24 @@ treat it as at least as important as classifier accuracy.
 
 ## Open decisions — do not assume, ask
 
-- **Audio/backend stack** (Python audio libraries, NeMo integration specifics): owned by a
-  specific team member, not yet finalized. Confirm with them before writing this stage.
-- **Risk score source**: whether the exposure/risk score is a genuinely separate small model,
-  or computed directly from the attack-twin classifier's confidence/entropy on the current
-  audio. Either is legitimate; pick one deliberately and document the choice once made.
-- **Which OS is the real context-signal backend built for**: depends on what the demo machine
-  actually runs. Confirm before starting that stage.
+- **Team split.** Who owns what beyond "the model side is a teammate's" is undecided. The seam
+  may move. Keep coupling to the event schema, not to internals.
+- **Audio/backend stack** (Python audio libraries, NeMo integration specifics, capture library,
+  sample rate, buffer size): owned by the model-side teammate, not yet finalized. The latency
+  budget in milliseconds falls out of the buffer size and is still unknown.
+- **VAD component** (Silero vs. WebRTC): model side's call.
+- **Whether the model side surfaces `speech_present`** on the event. If not, it is `false` and
+  the alert panel labels it unknown.
+
+Resolved since the first draft: risk score is derived from classifier statistics, not a
+separate model. Websocket at `ws://localhost:8765`, vanilla frontend, no build step.
 
 ---
 
 ## Decision gates
 
-Relative to project start, not fixed clock times — adjust to when you actually begin, and
-build in sleep. Hitting these on time matters more than any individual feature.
+Relative to project start (2026-08-15). Adjust to when you actually begin, and build in sleep.
+Hitting these on time matters more than any individual feature.
 
 | Offset | Gate | If missed |
 |---|---|---|
@@ -316,9 +333,14 @@ build in sleep. Hitting these on time matters more than any individual feature.
 - Any active mitigation: muting, ducking, masking, or otherwise modifying the outgoing audio.
   This was part of an earlier version of the project and has been deliberately cut. If it
   comes back later, it is a new, separate feature, not a quick addition to this build.
+- **The context signal in its entirety.** No sensitive-field detection, no `get_context()`, no
+  per-OS accessibility backends (Accessibility API / UI Automation / AT-SPI), no manual
+  fallback toggle. Cut deliberately. The alert decision is acoustic-only.
+- **Password mode.** `mode` is always `"normal"`. No password detection of any kind.
+- **All transcript correction.** No dictionary, no language model, no keyboard-adjacency prior.
+  If it returns, it returns mode-aware — dictionary/word-level correction applied to
+  password-mode transcription, ever, stays permanently out of scope.
 - Adversarial audio perturbation against the classifier's feature extraction.
-- Dictionary/word-level correction applied to password-mode transcription, ever.
 - Testing the attack twin on anyone besides consenting team members on their own hardware.
-- Real OS backends for platforms you are not actually demoing on — stub them.
 - Multiple keyboards or typists in the training data.
 - Any feature added after the feature-freeze gate.
