@@ -1,0 +1,3 @@
+# Middle-layer dependencies only (risk, alert, transport).
+# The model side's audio/NeMo dependencies are tracked separately.
+websockets>=13
