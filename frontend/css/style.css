@@ -97,7 +97,7 @@ body::after {
 }
 .brand {
   display: flex; align-items: center; gap: 9px;
-  font-size: 15px; font-weight: 500; letter-spacing: .3px; color: var(--ink-dim);
+  font-size: 20px; font-weight: 500; letter-spacing: .3px; color: var(--ink-dim);
 }
 .brand-dot {
   width: 7px; height: 7px; border-radius: 50%; background: var(--secure);
@@ -196,6 +196,7 @@ body::after {
   --cap-top-acc3: #f2efe8; --cap-wall-acc3: #d4cec2;
   --cap-legend: #4c4842;
   --rgb-a: 0.5;                                       /* RGB glow strength */
+  /* --glow intentionally unset here → keys fall back to the animated rainbow */
   --case: linear-gradient(180deg, #d3ccbe 0%, #c9c1b1 55%, #bfb7a5 100%);  /* soft neutral tray */
   --case-lip: #a49a86;
   --case-shade: rgba(90, 78, 50, 0.2);
@@ -220,9 +221,10 @@ body::after {
   --cap-top-sub: #e1dfd8; --cap-wall-sub: #bbb8ae;
   --cap-top-mod: #a9cbe8;  --cap-wall-mod: #7ba4c9;   /* accent 1 — light blue */
   --cap-top-acc: #cce5f4;  --cap-wall-acc: #9ec3db;   /* accent 2 — lighter blue (Esc/arrows) */
-  --cap-top-acc3: #f1c4d8; --cap-wall-acc3: #d095b2;  /* accent 3 — pink (WASD) */
+  --cap-top-acc3: #cbbdee; --cap-wall-acc3: #a294cf;  /* accent 3 — soft lavender (WASD) */
   --cap-legend: #4a4842;
   --rgb-a: 0;
+  --glow: transparent;
   --case: linear-gradient(180deg, #ceccc4 0%, #c2bfb7 60%, #b6b3aa 100%);  /* soft light grey tray */
   --case-lip: #9f9c93;
   --case-shade: rgba(66, 66, 78, 0.16);
@@ -237,6 +239,7 @@ body::after {
   --cap-top-acc3: #eec2cd; --cap-wall-acc3: #cf9aa8;  /* accent 3 — soft blush (WASD) */
   --cap-legend: #46543a;
   --rgb-a: 0;
+  --glow: transparent;
   --case: linear-gradient(180deg, #d3ddbf 0%, #c8d3b2 55%, #bec9a6 100%);  /* light sage frame */
   --case-lip: #a8b58c;
   --case-shade: rgba(90, 100, 66, 0.16);
@@ -252,6 +255,7 @@ body::after {
   --heart-top: #e08fa2;   --heart-wall: #bd6c80;      /* darker rosy blush for the heart */
   --cap-legend: #7c4a53;
   --rgb-a: 0;
+  --glow: transparent;
   --case: linear-gradient(180deg, #f3d4d4 0%, #ebc8c8 55%, #e3bcbc 100%);  /* light rose frame */
   --case-lip: #cfa4a4;
   --case-shade: rgba(150, 90, 100, 0.14);
@@ -276,6 +280,31 @@ body::after {
   --top: var(--heart-top); --wall: var(--heart-wall);
 }
 
+/* ---- theme: NVIDIA (black case + NVIDIA-green legends and accent keys) ---- */
+.keyboard[data-theme="nvidia"] {
+  --cap-top: #1f1f22;   --cap-wall: #101012;         /* black base */
+  --cap-top-sub: #1f1f22; --cap-wall-sub: #101012;
+  --cap-top-mod: #1f1f22;  --cap-wall-mod: #101012;
+  --cap-top-acc: #76b900;  --cap-wall-acc: #588f00;  /* NVIDIA green (Esc/arrows) */
+  --cap-top-acc3: #76b900; --cap-wall-acc3: #588f00; /* NVIDIA green (WASD) */
+  --cap-legend: #76b900;                             /* green legends on the black caps */
+  --rgb-a: 0;
+  --glow: rgba(118, 185, 0, 0.42);                   /* fixed green LED glow */
+  --case: linear-gradient(180deg, #17171a 0%, #121214 60%, #0d0d0f 100%);  /* black case */
+  --case-lip: #060607;
+  --case-shade: rgba(0, 0, 0, 0.5);
+  --case-hi: rgba(118, 185, 0, 0.14);                /* faint green top rim */
+}
+/* the green accent keys get a dark legend so it stays readable on green */
+.keyboard[data-theme="nvidia"] .key.wide-s,
+.keyboard[data-theme="nvidia"] .key.arrow,
+.keyboard[data-theme="nvidia"] .key[data-k="w"],
+.keyboard[data-theme="nvidia"] .key[data-k="a"],
+.keyboard[data-theme="nvidia"] .key[data-k="s"],
+.keyboard[data-theme="nvidia"] .key[data-k="d"] {
+  color: #10240a;
+}
+
 .kb-row { display: flex; gap: 5px; align-items: stretch; }
 
 .key {
@@ -296,7 +325,7 @@ body::after {
     inset 0 1px 0 rgba(255,255,255,0.18),               /* top edge */
     0 13px 0 var(--wall),                                /* FRONT wall */
     0 16px 12px rgba(0,0,0,0.45),                         /* ground shadow */
-    0 7px 20px 1px hsl(var(--hue) 92% 60% / var(--rgb-a)); /* RGB underglow */
+    0 7px 20px 1px var(--glow, hsla(var(--hue), 92%, 60%, 0.5)); /* RGB underglow */
   animation: rgbcycle 7s linear infinite;
   transition: transform .09s cubic-bezier(.2,.9,.2,1),
               filter .12s ease, background .3s ease, color .3s ease;
@@ -324,7 +353,7 @@ body::after {
     inset 0 1px 0 rgba(255,255,255,0.16),
     0 7px 0 var(--wall),
     0 10px 9px rgba(0,0,0,0.42),
-    0 5px 15px 1px hsl(var(--hue) 92% 60% / var(--rgb-a));
+    0 5px 15px 1px var(--glow, hsla(var(--hue), 92%, 60%, 0.5));
 }
 
 /* dual legends (number row, punctuation) */
@@ -346,7 +375,7 @@ body::after {
     inset 0 1px 0 rgba(255,255,255,0.16),
     0 7px 0 var(--wall),
     0 10px 9px rgba(0,0,0,0.42),
-    0 5px 15px 1px hsl(var(--hue) 92% 60% / var(--rgb-a));
+    0 5px 15px 1px var(--glow, hsla(var(--hue), 92%, 60%, 0.5));
 }
 .arrow-col { flex: 1; display: flex; flex-direction: column; gap: 9px; }
 .arrow-col .half {
@@ -355,7 +384,7 @@ body::after {
     inset 0 1px 0 rgba(255,255,255,0.16),
     0 4px 0 var(--wall),
     0 6px 6px rgba(0,0,0,0.4),
-    0 4px 12px 1px hsl(var(--hue) 92% 60% / var(--rgb-a));
+    0 4px 12px 1px var(--glow, hsla(var(--hue), 92%, 60%, 0.5));
 }
 
 /* pressed: the cap drops onto its wall (crisp), tints and glows lavender.
@@ -369,7 +398,7 @@ body::after {
     inset 0 1px 0 rgba(255,255,255,0.22),
     0 5px 0 var(--wall),                    /* front wall shortens as it presses */
     0 8px 8px rgba(0,0,0,0.45),
-    0 4px 14px 1px hsl(var(--hue) 92% 60% / var(--rgb-a));
+    0 4px 14px 1px var(--glow, hsla(var(--hue), 92%, 60%, 0.5));
 }
 
 /* Cute stickers: draw your own transparent PNG/SVG, drop the files into

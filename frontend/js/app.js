@@ -39,10 +39,11 @@
 
   // Keyboard design picker — cycle themes with the glass arrows (persisted).
   const THEMES = [
-    { id: "rgb", name: "Aurora RGB" },
-    { id: "cloud", name: "Cloud" },
+    { id: "rgb", name: "RGB" },
+    { id: "nvidia", name: "NVIDIA" },
     { id: "lily", name: "Lilypad" },
     { id: "blush", name: "Blush" },
+    { id: "cloud", name: "Cloud" },
   ];
   const kb = document.getElementById("keyboard");
   const themeLabel = document.getElementById("theme-name");
