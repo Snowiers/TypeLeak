@@ -36,6 +36,27 @@ classifier is wired in, falling back mid-demo is a flag rather than a code edit.
 
 Useful replay options: `--fixture PATH`, `--speed 2.0`, `--no-loop`.
 
+### Recording a session
+
+`--record PATH` writes the live event stream to a replayable JSONL file. This is how a
+real run becomes a fixture:
+
+```
+python -m exposure --record takes/demo.jsonl                       # capture a real run
+python -m exposure --source replay --fixture takes/demo.jsonl      # replay it, identically
+```
+
+Recording works with any source and does not require a frontend to be connected — a
+take is not lost because nobody had the page open.
+
+Two properties that matter when the take is hard to redo. Each line is flushed as it
+is written, so interrupting with Ctrl-C still leaves a complete file. And an existing
+path is never overwritten: recording to `demo.jsonl` twice produces `demo-1.jsonl`.
+
+For a prerecorded demo this is the important workflow. Record one genuine session,
+then replay it for as many takes as the video needs — every take has identical alert
+timing, so narration and footage can be recorded separately or cut together.
+
 Replay reconstructs upstream predictions and runs them through the live risk and alert
 code, rather than replaying frozen verdicts. A threshold change is therefore visible in
 replay instead of being baked into the recording.
@@ -159,6 +180,7 @@ by however long inference took, which is exactly the latency the demo is about.
 | `event.py` | Both seams: `Prediction` in, `AudioEvent` out |
 | `source.py` | `EventSource` interface plus `FakeSource` |
 | `replay.py` | Deterministic playback from a JSONL file |
+| `recorder.py` | Writes a live session to a replayable JSONL file |
 | `classifier.py` | `QueueSource` and `CallableSource` — where the model side plugs in |
 | `state.py` | Latch and bounded alert log |
 | `server.py` | Websocket transport |

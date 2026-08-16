@@ -13,6 +13,7 @@ import logging
 from typing import Any
 
 from exposure.event import assemble_event
+from exposure.recorder import EventRecorder
 from exposure.source import EventSource
 from exposure.state import ExposureState
 
@@ -41,11 +42,13 @@ class EventServer:
         host: str = DEFAULT_HOST,
         port: int = DEFAULT_PORT,
         state: ExposureState | None = None,
+        recorder: EventRecorder | None = None,
     ) -> None:
         self._source = source
         self._host = host
         self._port = port
         self._state = state or ExposureState()
+        self._recorder = recorder
         self._clients: set[Any] = set()
 
     async def run(self) -> None:
@@ -84,11 +87,16 @@ class EventServer:
             await self._broadcast(self._state.snapshot())
 
     async def _pump(self) -> None:
-        """Drive the pipeline: prediction in, event assembled, event broadcast."""
+        """Drive the pipeline: prediction in, event assembled, recorded, broadcast."""
         async for prediction in self._source.predictions():
             event = assemble_event(prediction)
             self._state.record(event)
-            await self._broadcast(event.to_dict())
+            payload = event.to_dict()
+            # Recorded before broadcast, and independently of whether anyone is
+            # connected: a take should not be lost because the frontend was not open.
+            if self._recorder is not None:
+                self._recorder.write(payload)
+            await self._broadcast(payload)
 
     async def _broadcast(self, payload: dict[str, Any]) -> None:
         if not self._clients:

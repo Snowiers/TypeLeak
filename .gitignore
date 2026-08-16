@@ -10,3 +10,9 @@ env/
 # Recordings and datasets are large and belong to the model side, not the repo.
 labeled_dataset/
 *.wav
+
+# Working session recordings. The one take chosen for the demo belongs in
+# fixtures/ instead, committed, so the whole team replays the same stream.
+takes/
+
+.DS_Store

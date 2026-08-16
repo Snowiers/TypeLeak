@@ -21,6 +21,7 @@ import sys
 from pathlib import Path
 
 from exposure.event import assemble_event
+from exposure.recorder import EventRecorder
 from exposure.replay import ReplaySource
 from exposure.server import DEFAULT_HOST, DEFAULT_PORT, EventServer
 from exposure.source import FakeSource
@@ -64,6 +65,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--speed", type=float, default=1.0, help="replay speed multiplier")
     parser.add_argument("--no-loop", action="store_true", help="stop after one replay pass")
     parser.add_argument(
+        "--record",
+        metavar="PATH",
+        help="write this session to a replayable JSONL file (never overwrites)",
+    )
+    parser.add_argument(
         "--dump", type=int, metavar="N", help="print N events as JSONL and exit"
     )
     parser.add_argument(
@@ -87,11 +93,29 @@ def main(argv: list[str] | None = None) -> int:
     if args.source == "replay":
         log.info("replaying %d events from %s", source.length, args.fixture)
 
-    server = EventServer(source, host=args.host, port=args.port)
+    recorder = None
+    if args.record:
+        try:
+            recorder = EventRecorder(args.record)
+        except OSError as exc:
+            # A mistyped path should not end a recording session in a traceback.
+            raise SystemExit(f"cannot record to {args.record}: {exc}") from exc
+        log.info("recording to %s", recorder.path)
+
+    server = EventServer(source, host=args.host, port=args.port, recorder=recorder)
     try:
         asyncio.run(server.run())
     except KeyboardInterrupt:
-        return 0
+        pass
+    finally:
+        if recorder is not None:
+            recorder.close()
+            log.info("recorded %d events to %s", recorder.count, recorder.path)
+            if recorder.count:
+                log.info(
+                    "replay it with: python -m exposure --source replay --fixture %s",
+                    recorder.path,
+                )
     return 0
 
 
