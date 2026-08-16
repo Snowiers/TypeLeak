@@ -36,6 +36,52 @@
   document.getElementById("finish").addEventListener("click", () => transcript.finish());
   document.getElementById("clear-logs").addEventListener("click", () => transcript.clearLogs());
 
+  // Keyboard design picker — cycle themes with the glass arrows (persisted).
+  const THEMES = [
+    { id: "rgb", name: "Aurora RGB" },
+    { id: "cloud", name: "Cloud" },
+    { id: "sage", name: "Sage" },
+  ];
+  const kb = document.getElementById("keyboard");
+  const themeLabel = document.getElementById("theme-name");
+  let themeIdx = 0;
+  try {
+    const saved = localStorage.getItem("kb_theme");
+    const i = THEMES.findIndex((t) => t.id === saved);
+    if (i >= 0) themeIdx = i;
+  } catch (e) {}
+  function applyTheme() {
+    const t = THEMES[themeIdx];
+    kb.dataset.theme = t.id;
+    themeLabel.textContent = t.name;
+    try { localStorage.setItem("kb_theme", t.id); } catch (e) {}
+  }
+  applyTheme();
+
+  // slide the keyboard off-screen, swap the design while it's gone, slide the next in
+  const wrap = document.querySelector(".keyboard-wrap");
+  let animating = false;
+  function switchTheme(dir) {
+    if (animating) return;
+    animating = true;
+    const outX = dir > 0 ? "-125%" : "125%";
+    const inX = dir > 0 ? "125%" : "-125%";
+    wrap.style.transition = "transform .3s ease-in";
+    wrap.style.transform = "translateX(" + outX + ")";
+    setTimeout(() => {
+      themeIdx = (themeIdx + dir + THEMES.length) % THEMES.length;
+      applyTheme();
+      wrap.style.transition = "none";
+      wrap.style.transform = "translateX(" + inX + ")";
+      void wrap.offsetWidth;                 // reflow so the jump takes effect
+      wrap.style.transition = "transform .34s ease-out";
+      wrap.style.transform = "translateX(0)";
+      setTimeout(() => { animating = false; }, 360);
+    }, 300);
+  }
+  document.getElementById("theme-prev").addEventListener("click", () => switchTheme(-1));
+  document.getElementById("theme-next").addEventListener("click", () => switchTheme(1));
+
   // Acknowledge / clear the latched alarm. Window-focus only.
   window.addEventListener("keydown", (e) => {
     if (e.shiftKey && (e.ctrlKey || e.metaKey) && (e.key === "X" || e.key === "x")) {

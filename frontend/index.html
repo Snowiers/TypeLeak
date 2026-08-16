@@ -23,7 +23,7 @@
   <!-- typed-session history, quietly tucked on the left -->
   <aside id="history" class="glass history">
     <div class="panel-head">
-      <span>typed</span>
+      <span>✎ typed</span>
       <button id="clear-logs" class="mini-btn" title="clear all logs">clear</button>
     </div>
     <ul id="history-list" class="history-list"></ul>
@@ -38,13 +38,20 @@
 
     <!-- the Mac keyboard -->
     <div class="keyboard-wrap">
-      <div id="keyboard" class="keyboard" aria-label="predicted keystrokes"></div>
+      <div id="keyboard" class="keyboard" data-theme="rgb" aria-label="predicted keystrokes"></div>
+    </div>
+
+    <!-- cycle keyboard designs -->
+    <div class="theme-picker">
+      <button class="theme-arrow" id="theme-prev" aria-label="Previous keyboard">‹</button>
+      <span class="theme-name" id="theme-name">Aurora RGB</span>
+      <button class="theme-arrow" id="theme-next" aria-label="Next keyboard">›</button>
     </div>
   </main>
 
   <!-- exposure readout: a quiet glass panel on the right saying why it's exposed -->
   <aside id="exposure" class="glass exposure-panel secure">
-    <div class="exp-head"><span>exposure</span><span class="exp-dot"></span></div>
+    <div class="exp-head"><span>◈ exposure</span><span class="exp-dot"></span></div>
     <div class="exp-state" id="exp-state">secure</div>
     <div class="exp-why" id="exp-why">typing sound is too ambiguous to reconstruct</div>
     <div class="exp-meter"><div class="exp-meter-fill" id="exp-meter"></div></div>

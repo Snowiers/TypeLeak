@@ -26,56 +26,36 @@
   --r-key: 9px;
 }
 
+/* animatable hue for the RGB LED underglow */
+@property --hue { syntax: "<number>"; initial-value: 0; inherits: false; }
+@keyframes rgbcycle { from { --hue: 0; } to { --hue: 360; } }
+
 * { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; }
 
 body {
   font-family: var(--font);
   color: var(--ink);
-  /* dark, but faintly tinted blue→purple — flat and minimal, no glow */
-  background: linear-gradient(165deg, #14141f 0%, #101019 50%, #0d0b13 100%);
+  background: #0e0e13;          /* one solid dark base */
   overflow: hidden;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
 }
 
-/* drifting, heavily-blurred streaks of colored light — the glassy backdrop.
-   Two layers with scattered (non-symmetric) blobs, each wandering on its own
-   path/speed, so the light feels organic instead of pinned to the corners. */
-body::before, body::after {
-  content: "";
-  position: fixed; inset: -30%;
-  z-index: 0; pointer-events: none;
-  filter: blur(70px) saturate(150%);
-  opacity: 0.55;
-}
+/* faint dotted-grid texture over the whole background */
 body::before {
-  background:
-    radial-gradient(36% 30% at 18% 34%, rgba(150, 110, 255, 0.55), transparent 60%),
-    radial-gradient(30% 34% at 63% 12%, rgba(80, 150, 255, 0.50), transparent 60%),
-    radial-gradient(40% 30% at 88% 60%, rgba(255, 110, 200, 0.46), transparent 60%),
-    radial-gradient(28% 26% at 44% 72%, rgba(120, 205, 255, 0.40), transparent 62%);
-  animation: auroraA 24s ease-in-out infinite;
+  content: "";
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1.4px);
+  background-size: 26px 26px;
 }
+/* just two soft, still flares for depth — no rainbow */
 body::after {
+  content: "";
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
   background:
-    radial-gradient(34% 32% at 78% 30%, rgba(190, 120, 255, 0.48), transparent 60%),
-    radial-gradient(30% 30% at 34% 88%, rgba(120, 150, 255, 0.44), transparent 62%),
-    radial-gradient(38% 34% at 8% 66%, rgba(255, 130, 210, 0.40), transparent 62%),
-    radial-gradient(26% 26% at 58% 46%, rgba(160, 130, 255, 0.36), transparent 64%);
-  animation: auroraB 33s ease-in-out infinite;
-}
-@keyframes auroraA {
-  0%   { transform: translate3d(0, 0, 0)      scale(1)    rotate(0deg); }
-  33%  { transform: translate3d(5%, -4%, 0)   scale(1.10) rotate(5deg); }
-  66%  { transform: translate3d(-4%, 3%, 0)   scale(1.05) rotate(-4deg); }
-  100% { transform: translate3d(0, 0, 0)      scale(1)    rotate(0deg); }
-}
-@keyframes auroraB {
-  0%   { transform: translate3d(0, 0, 0)      scale(1.05) rotate(0deg); }
-  33%  { transform: translate3d(-5%, 4%, 0)   scale(1)    rotate(-6deg); }
-  66%  { transform: translate3d(4%, -3%, 0)   scale(1.12) rotate(4deg); }
-  100% { transform: translate3d(0, 0, 0)      scale(1.05) rotate(0deg); }
+    radial-gradient(46% 40% at 20% 16%, rgba(138, 112, 216, 0.16), transparent 70%),
+    radial-gradient(42% 40% at 84% 88%, rgba(96, 120, 200, 0.10), transparent 72%);
 }
 
 #stars { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
@@ -113,11 +93,11 @@ body::after {
   display: flex; align-items: center; gap: 7px;
   font-size: 11px; color: var(--ink-faint);
   padding: 5px 11px; border-radius: 999px;
-  border: 1px solid var(--glass-brd); background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.07); background: rgba(255, 255, 255, 0.03);
 }
 .source-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ink-faint); }
-.source-pill.live { color: var(--secure); } .source-pill.live .source-dot { background: var(--secure); box-shadow: 0 0 8px var(--secure); }
-.source-pill.demo { color: var(--cool); } .source-pill.demo .source-dot { background: var(--cool); box-shadow: 0 0 8px var(--cool); }
+.source-pill.live { color: var(--secure); } .source-pill.live .source-dot { background: var(--secure); }
+.source-pill.demo { color: var(--ink-dim); } .source-pill.demo .source-dot { background: var(--ink-dim); }
 .source-pill.connecting .source-dot { animation: blink 1s steps(1) infinite; }
 @keyframes blink { 0%, 50% { opacity: 1; } 50.01%, 100% { opacity: .25; } }
 
@@ -160,8 +140,8 @@ body::after {
 .keyboard-wrap { perspective: 1500px; display: flex; justify-content: center; }
 .keyboard {
   width: min(880px, 92vw);
-  display: flex; flex-direction: column; gap: 11px;
-  padding: 16px 16px 20px; border-radius: 26px;
+  display: flex; flex-direction: column; gap: 17px;
+  padding: 16px 16px 24px; border-radius: 26px;
   /* same glass material as the panels — just larger and tilted */                                    
   background: linear-gradient(155deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04));          
   border: 1px solid var(--glass-brd);                                                                 
@@ -177,9 +157,64 @@ body::after {
   transform-style: preserve-3d;
 }
 @keyframes float {
-  0%, 100% { transform: rotateX(9deg) translateY(0); }
-  50%      { transform: rotateX(9deg) translateY(-8px); }
+  0%, 100% { transform: rotateX(10deg) translateY(0); }
+  50%      { transform: rotateX(10deg) translateY(-7px); }
 }
+
+/* dress the tray as a solid mechanical case (overrides the glass look above) */
+.keyboard {
+  /* ---- default theme: Aurora RGB (dark caps + rainbow underglow) ---- */
+  --cap-top: #332f45;   --cap-wall: #1d1a2b;         /* alphas — clean dark aubergine */
+  --cap-top-sub: #2e2a3d; --cap-wall-sub: #191627;   /* numbers/punctuation */
+  --cap-top-mod: #3c3654; --cap-wall-mod: #221e30;   /* modifiers */
+  --cap-top-acc: #5c3f80; --cap-wall-acc: #35204d;   /* ACCENT keys — purple */
+  --cap-legend: #e0ddef;
+  --rgb-a: 0.5;                                       /* RGB glow strength */
+  --case: linear-gradient(180deg, #2c2645 0%, #241e39 60%, #1d1830 100%);
+  --case-lip: #16111e;
+  --case-shade: rgba(0, 0, 0, 0.5);                   /* plate recess shading */
+  --case-hi: rgba(255, 255, 255, 0.10);
+
+  background: var(--case);
+  border: none;
+  border-top: 1px solid var(--case-hi);
+  border-radius: 16px;
+  padding: 20px 18px 22px;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow:
+    inset 0 2px 0 var(--case-hi),
+    inset 0 13px 26px var(--case-shade),
+    0 14px 0 var(--case-lip),
+    0 32px 46px rgba(0, 0, 0, 0.55);
+}
+/* ---- theme: Cloud (light lavender caps, no RGB) ---- */
+.keyboard[data-theme="cloud"] {
+  --cap-top: #cbc6d6;   --cap-wall: #9d96b0;         /* muted lavender-grey, cohesive */
+  --cap-top-sub: #c2bccf; --cap-wall-sub: #948cab;
+  --cap-top-mod: #b4adc6; --cap-wall-mod: #837aa0;
+  --cap-top-acc: #a99cd0; --cap-wall-acc: #7566a4;   /* lavender accents */
+  --cap-legend: #3f3956;
+  --rgb-a: 0;
+  --case: linear-gradient(180deg, #bab4c8 0%, #aca5bd 60%, #9f98b2 100%);  /* soft grey-lilac */
+  --case-lip: #8a83a1;
+  --case-shade: rgba(70, 60, 100, 0.20);
+  --case-hi: rgba(255, 255, 255, 0.4);
+}
+/* ---- theme: Sage (pastel sage-green caps, brown accents, no RGB) ---- */
+.keyboard[data-theme="sage"] {
+  --cap-top: #ccd2bf;   --cap-wall: #a2ab90;         /* soft, muted sage */
+  --cap-top-sub: #c4cbb5; --cap-wall-sub: #98a287;
+  --cap-top-mod: #b6bfa5; --cap-wall-mod: #8a9577;
+  --cap-top-acc: #c3a684; --cap-wall-acc: #96785a;   /* warm BROWN accents */
+  --cap-legend: #3b4331;
+  --rgb-a: 0;
+  --case: linear-gradient(180deg, #3a3d31 0%, #31332a 60%, #292b23 100%);  /* warm dark olive */
+  --case-lip: #1c1d16;
+  --case-shade: rgba(0, 0, 0, 0.4);
+  --case-hi: rgba(255, 255, 255, 0.08);
+}
+
 .kb-row { display: flex; gap: 5px; align-items: stretch; }
 
 .key {
@@ -187,57 +222,134 @@ body::after {
   flex: 1;
   display: flex; align-items: center; justify-content: center;
   height: 46px; min-width: 0;
-  font-family: var(--font); font-size: 14px; color: #f4f2ff;
-  border-radius: 8px;
-  /* symmetric pastel keycap seen head-on: lavender TOP, mirrored SIDE bevels
-     (left = right, so perspective reads correctly), straight FRONT wall below. */
-  background: linear-gradient(180deg, rgba(204,196,238,0.40), rgba(180,170,228,0.26));
-  border-top: 1px solid rgba(255,255,255,0.45);
-  /* SAME lavender hue as the top, just stepped darker: top(light) → side → front */
-  border-left: 3px solid rgba(160,146,206,0.95);    /* SIDE bevel — mid lavender */
-  border-right: 3px solid rgba(160,146,206,0.95);   /* SIDE bevel (mirror of left) */
+  font-family: var(--font); font-size: 14px; font-weight: 600;
+  color: var(--cap-legend);               /* legend color comes from the theme */
+  border-radius: 6px;                     /* square chunky keycap */
+  /* opaque keycap: TOP + darker FRONT wall + an RGB LED glowing from underneath
+     (only visible when the theme's --rgb-a is > 0). All colors are theme vars. */
+  --top: var(--cap-top);
+  --wall: var(--cap-wall);
+  --hue: 0;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--top) 82%, white), var(--top));
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.5),
-    0 7px 0 rgba(122,107,180,0.98),       /* FRONT wall — darker step of the same lavender */
-    0 10px 9px rgba(84,72,140,0.30);      /* soft ground shadow */
-  transition: transform .09s cubic-bezier(.2,.9,.2,1), box-shadow .09s ease,
-              background .3s ease, color .3s ease;
+    inset 0 1px 0 rgba(255,255,255,0.18),               /* top edge */
+    0 13px 0 var(--wall),                                /* FRONT wall */
+    0 16px 12px rgba(0,0,0,0.45),                         /* ground shadow */
+    0 7px 20px 1px hsl(var(--hue) 92% 60% / var(--rgb-a)); /* RGB underglow */
+  animation: rgbcycle 7s linear infinite;
+  transition: transform .09s cubic-bezier(.2,.9,.2,1),
+              filter .12s ease, background .3s ease, color .3s ease;
   --sev-c: var(--cool);
 }
-.row-fn .key { height: 30px; font-size: 10px; color: var(--ink-dim); }
+/* colorway — specials, mods, and accent keys draw from the theme's shades */
+.key:has(.sub) { --top: var(--cap-top-sub); --wall: var(--cap-wall-sub); }
+.key.mod, .key.wide, .key.wide-s, .key.fkey, .key.arrow, .key.space {
+  --top: var(--cap-top-mod); --wall: var(--cap-wall-mod);
+}
+/* ACCENT keys — WASD, Esc, and the arrows get the theme's accent color */
+.key[data-k="w"], .key[data-k="a"], .key[data-k="s"], .key[data-k="d"],
+.key.wide-s, .key.arrow {
+  --top: var(--cap-top-acc); --wall: var(--cap-wall-acc);
+}
+
+/* smaller keys get proportionally shorter walls so the chunk stays balanced */
+.row-fn .key {
+  height: 30px; font-size: 10px;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.16),
+    0 7px 0 var(--wall),
+    0 10px 9px rgba(0,0,0,0.42),
+    0 5px 15px 1px hsl(var(--hue) 92% 60% / var(--rgb-a));
+}
 
 /* dual legends (number row, punctuation) */
-.key .sub { font-size: 9px; color: rgba(255, 255, 255, 0.5); line-height: 1; margin-bottom: 2px; }
+.key .sub { font-size: 9px; color: color-mix(in srgb, var(--cap-legend) 62%, transparent); line-height: 1; margin-bottom: 2px; }
 .key .main { font-size: 13px; line-height: 1; }
 .key:has(.sub) { flex-direction: column; justify-content: center; }
 
 /* wide / labeled keys */
-.key.wide, .key.wide-s, .key.mod { font-size: 11px; color: var(--ink-dim); }
+.key.wide, .key.wide-s, .key.mod { font-size: 11px; }
 .key.mod { font-size: 15px; }
 .key.wide.l { justify-content: flex-start; padding-left: 12px; }
 .key.wide.r { justify-content: flex-end; padding-right: 12px; }
 
 /* arrow cluster */
 .arrows { display: flex; gap: 5px; align-items: stretch; }
-.arrows .arrow { flex: 1; font-size: 10px; color: var(--ink-dim); }
-.arrow-col { flex: 1; display: flex; flex-direction: column; gap: 6px; }
-.arrow-col .half { height: 21px; font-size: 8px; }
+.arrows .arrow {
+  flex: 1; font-size: 10px;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.16),
+    0 7px 0 var(--wall),
+    0 10px 9px rgba(0,0,0,0.42),
+    0 5px 15px 1px hsl(var(--hue) 92% 60% / var(--rgb-a));
+}
+.arrow-col { flex: 1; display: flex; flex-direction: column; gap: 9px; }
+.arrow-col .half {
+  height: 20px; font-size: 8px;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.16),
+    0 4px 0 var(--wall),
+    0 6px 6px rgba(0,0,0,0.4),
+    0 4px 12px 1px hsl(var(--hue) 92% 60% / var(--rgb-a));
+}
 
 /* pressed: the cap drops onto its wall (crisp), tints and glows lavender.
    confidence (--i) sets the glow; severity lives in the exposure panel, not here. */
+/* pressed: the cap just travels down and lifts in brightness — no glow flare.
+   (the RGB underglow, if the theme has one, simply carries on underneath.) */
 .key.hit {
-  color: #fff;
-  transform: translateY(4px);              /* cap presses straight down */
-  background: linear-gradient(180deg,
-    color-mix(in srgb, var(--sev-c) calc(45% + var(--i, .5) * 35%), rgba(255,255,255,0.28)),
-    color-mix(in srgb, var(--sev-c) 32%, rgba(255,255,255,0.12)));
-  border-left-color: color-mix(in srgb, var(--sev-c) 55%, white);
-  border-right-color: color-mix(in srgb, var(--sev-c) 55%, white);
+  transform: translateY(8px);
+  filter: brightness(1.22);
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.7),
-    0 3px 0 rgba(122,107,180,0.98),        /* front wall shortens as it presses */
-    0 5px 6px rgba(84,72,140,0.30),
-    0 0 calc(10px + var(--i, .5) * 24px) var(--sev-c);
+    inset 0 1px 0 rgba(255,255,255,0.22),
+    0 5px 0 var(--wall),                    /* front wall shortens as it presses */
+    0 8px 8px rgba(0,0,0,0.45),
+    0 4px 14px 1px hsl(var(--hue) 92% 60% / var(--rgb-a));
+}
+
+/* Cute stickers: draw your own transparent PNG/SVG, drop the files into
+   frontend/stickers/, and map them to keys below. Nothing shows until the file
+   exists, so this is safe to leave in place. */
+.key[data-k="q"]::after,
+.key[data-k="g"]::after,
+.key[data-k="p"]::after,
+.key.wide-s::after,
+.key.space::after {
+  content: ""; position: absolute; top: 2px; right: 3px;
+  width: 16px; height: 16px;
+  background-size: contain; background-repeat: no-repeat; background-position: center;
+  transform: rotate(-8deg); pointer-events: none; z-index: 3;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.45));
+}
+.key[data-k="q"]::after { background-image: url("../stickers/sticker1.png"); }
+.key[data-k="g"]::after { background-image: url("../stickers/sticker2.png"); }
+.key[data-k="p"]::after { background-image: url("../stickers/sticker3.png"); }
+.key.wide-s::after      { background-image: url("../stickers/sticker4.png"); }  /* esc */
+.key.space::after       { background-image: url("../stickers/sticker5.png"); right: 16px; width: 20px; height: 20px; }
+
+/* --- theme picker (glass arrows) ---------------------------------------- */
+.theme-picker {
+  display: flex; align-items: center; justify-content: center; gap: 16px;
+  margin-top: 4px;
+}
+.theme-arrow {
+  width: 40px; height: 40px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; line-height: 1; color: var(--ink);
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid var(--glass-brd);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+  transition: background .18s ease, transform .1s ease;
+}
+.theme-arrow:hover { background: rgba(255, 255, 255, 0.15); }
+.theme-arrow:active { transform: scale(.9); }
+.theme-name {
+  min-width: 120px; text-align: center;
+  font-size: 12px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--ink-dim);
 }
 
 /* --- history (left) ----------------------------------------------------- */
@@ -249,7 +361,9 @@ body::after {
 }
 .panel-head {
   display: flex; align-items: center; justify-content: space-between;
-  font-size: 12px; color: var(--ink-dim); margin-bottom: 10px;
+  font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--ink-dim); margin-bottom: 12px;
+  padding-bottom: 9px; border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 .mini-btn {
   font-family: var(--font); font-size: 10px; color: var(--ink-faint);
@@ -261,16 +375,22 @@ body::after {
 .history-list::-webkit-scrollbar { width: 5px; }
 .history-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,.12); border-radius: 3px; }
 .hist-item {
-  padding: 9px 11px; border-radius: 13px;
-  background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.06);
+  padding: 8px 11px; border-radius: 8px;
+  background: rgba(255,255,255,.04);
   display: flex; flex-direction: column; gap: 3px;
 }
 .hist-time { font-family: var(--mono); font-size: 10px; color: var(--ink-faint); }
 .hist-text { font-family: var(--mono); font-size: 12px; color: var(--ink-dim); word-break: break-word; }
 .hist-empty { font-size: 11px; color: var(--ink-faint); text-align: center; padding: 14px 0; }
 
-/* keep side-panel text legible over the drifting colored light */
-.history, .exposure-panel { text-shadow: 0 1px 3px rgba(0, 0, 0, 0.35); }
+/* flat, quiet panels — one solid fill, one hairline edge, a plain drop shadow */
+.history, .exposure-panel {
+  background: rgba(18, 18, 23, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.4);
+}
 
 /* --- exposure panel (right) --------------------------------------------- */
 .exposure-panel {
@@ -278,17 +398,19 @@ body::after {
   width: 210px;
   padding: 16px; display: flex; flex-direction: column;
   border-radius: 20px;
-  border: 1px solid var(--sev-c);
-  transition: border-color .5s ease, box-shadow .5s ease;
-  --sev-c: var(--glass-brd);
+  transition: box-shadow .5s ease;
+  --sev-c: var(--ink-faint);   /* drives the state dot; colored per severity */
 }
-.exposure-panel.secure   { --sev-c: rgba(134,229,180,.35); box-shadow: 0 0 22px rgba(134,229,180,.10), inset 0 1px 0 var(--glass-hi); }
-.exposure-panel.moderate { --sev-c: rgba(243,202,116,.55); box-shadow: 0 0 26px rgba(243,202,116,.16), inset 0 1px 0 var(--glass-hi); }
-.exposure-panel.critical { --sev-c: rgba(255,107,107,.70); box-shadow: 0 0 30px rgba(255,107,107,.22), inset 0 1px 0 var(--glass-hi); }
+.exposure-panel.secure   { --sev-c: var(--secure); }
+.exposure-panel.moderate { --sev-c: var(--moderate); }
+.exposure-panel.critical { --sev-c: var(--critical);
+  box-shadow: 0 14px 32px rgba(0,0,0,0.4), 0 0 26px rgba(255,107,107,0.22); }  /* only critical alarms */
 
 .exp-head {
   display: flex; align-items: center; justify-content: space-between;
-  font-size: 12px; color: var(--ink-dim); margin-bottom: 14px;
+  font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--ink-dim); margin-bottom: 14px;
+  padding-bottom: 9px; border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 .exp-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--sev-c); box-shadow: 0 0 8px var(--sev-c); }
 .exposure-panel.moderate .exp-dot,

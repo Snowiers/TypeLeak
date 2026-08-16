@@ -34,7 +34,7 @@ window.App = window.App || {};
     }
 
     _seed() {
-      const count = Math.round((this.w * this.h) / 11000);
+      const count = 0;   // starfield off — the CSS dotted grid provides texture
       this.stars = [];
       for (let i = 0; i < count; i++) {
         this.stars.push({

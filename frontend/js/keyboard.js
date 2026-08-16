@@ -88,14 +88,17 @@ window.App = window.App || {};
     }
 
     _build() {
-      for (const row of LAYOUT) {
+      LAYOUT.forEach((row, r) => {
         const rowEl = document.createElement("div");
         rowEl.className = "kb-row" + (row.cls ? " " + row.cls : "");
-        for (const spec of row.keys) {
-          rowEl.appendChild(spec.arrows ? this._arrows(spec) : this._key(spec));
-        }
+        row.keys.forEach((spec, c) => {
+          const el = spec.arrows ? this._arrows(spec) : this._key(spec);
+          // stagger the RGB underglow diagonally so it sweeps across the board
+          el.style.animationDelay = (-(r * 0.5 + c * 0.28)).toFixed(2) + "s";
+          rowEl.appendChild(el);
+        });
         this.root.appendChild(rowEl);
-      }
+      });
     }
 
     _key(spec) {
@@ -114,7 +117,10 @@ window.App = window.App || {};
       } else {
         el.textContent = spec.main;
       }
-      if (spec.code !== undefined) this.map[spec.code] = el;
+      if (spec.code !== undefined) {
+        this.map[spec.code] = el;
+        el.dataset.k = spec.code;   // lets CSS put cute stickers on specific keys
+      }
       return el;
     }
 
