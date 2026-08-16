@@ -211,7 +211,7 @@ body::after {
   --cap-legend: #4c4842;
   --rgb-a: 0.5;                                       /* RGB glow strength */
   /* --glow intentionally unset here → keys fall back to the animated rainbow */
-  --case: linear-gradient(180deg, #d3ccbe 0%, #c9c1b1 55%, #bfb7a5 100%);  /* soft neutral tray */
+  --case: #cbc3b3;  /* solid neutral tray */
   --case-lip: #a49a86;
   --case-shade: rgba(90, 78, 50, 0.2);
   --case-hi: rgba(255, 255, 255, 0.5);
@@ -224,10 +224,9 @@ body::after {
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   box-shadow:
-    inset 0 2px 0 var(--case-hi),
-    inset 0 13px 26px var(--case-shade),
-    0 14px 0 var(--case-lip),
-    0 26px 50px rgba(60, 44, 40, 0.32);              /* softer, warm-tinted ground shadow */
+    inset 0 2px 0 var(--case-hi),                    /* top edge highlight only */
+    0 14px 0 var(--case-lip),                        /* front lip = the board's thickness */
+    0 26px 50px rgba(60, 44, 40, 0.30);              /* soft ground shadow */
 }
 /* ---- theme: Cloud (light lavender caps, no RGB) ---- */
 .keyboard[data-theme="cloud"] {
@@ -239,7 +238,7 @@ body::after {
   --cap-legend: #4a4842;
   --rgb-a: 0;
   --glow: transparent;
-  --case: linear-gradient(180deg, #ceccc4 0%, #c2bfb7 60%, #b6b3aa 100%);  /* soft light grey tray */
+  --case: #c3c0b8;  /* solid light grey tray */
   --case-lip: #9f9c93;
   --case-shade: rgba(66, 66, 78, 0.16);
   --case-hi: rgba(255, 255, 255, 0.5);
@@ -254,7 +253,7 @@ body::after {
   --cap-legend: #46543a;
   --rgb-a: 0;
   --glow: transparent;
-  --case: linear-gradient(180deg, #d3ddbf 0%, #c8d3b2 55%, #bec9a6 100%);  /* light sage frame */
+  --case: #cad4b4;  /* solid light sage frame */
   --case-lip: #a8b58c;
   --case-shade: rgba(90, 100, 66, 0.16);
   --case-hi: rgba(255, 255, 255, 0.5);
@@ -270,7 +269,7 @@ body::after {
   --cap-legend: #7c4a53;
   --rgb-a: 0;
   --glow: transparent;
-  --case: linear-gradient(180deg, #f3d4d4 0%, #ebc8c8 55%, #e3bcbc 100%);  /* light rose frame */
+  --case: #edcaca;  /* solid light rose frame */
   --case-lip: #cfa4a4;
   --case-shade: rgba(150, 90, 100, 0.14);
   --case-hi: rgba(255, 255, 255, 0.55);
@@ -304,7 +303,7 @@ body::after {
   --cap-legend: #76b900;                             /* green legends on the black caps */
   --rgb-a: 0;
   --glow: rgba(118, 185, 0, 0.42);                   /* fixed green LED glow */
-  --case: linear-gradient(180deg, #17171a 0%, #121214 60%, #0d0d0f 100%);  /* black case */
+  --case: #141418;  /* solid black case */
   --case-lip: #060607;
   --case-shade: rgba(0, 0, 0, 0.5);
   --case-hi: rgba(118, 185, 0, 0.14);                /* faint green top rim */
@@ -338,7 +337,7 @@ body::after {
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,0.18),               /* top edge */
     0 13px 0 var(--wall),                                /* FRONT wall */
-    0 16px 12px rgba(0,0,0,0.45),                         /* ground shadow */
+    0 11px 9px rgba(0,0,0,0.26),                          /* soft ground shadow */
     0 7px 20px 1px var(--glow, hsla(var(--hue), 92%, 60%, 0.5)); /* RGB underglow */
   animation: rgbcycle 7s linear infinite;
   transition: transform .09s cubic-bezier(.2,.9,.2,1),
@@ -366,7 +365,7 @@ body::after {
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,0.16),
     0 7px 0 var(--wall),
-    0 10px 9px rgba(0,0,0,0.42),
+    0 8px 7px rgba(0,0,0,0.24),
     0 5px 15px 1px var(--glow, hsla(var(--hue), 92%, 60%, 0.5));
 }
 
@@ -388,7 +387,7 @@ body::after {
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,0.16),
     0 7px 0 var(--wall),
-    0 10px 9px rgba(0,0,0,0.42),
+    0 8px 7px rgba(0,0,0,0.24),
     0 5px 15px 1px var(--glow, hsla(var(--hue), 92%, 60%, 0.5));
 }
 .arrow-col { flex: 1; display: flex; flex-direction: column; gap: 9px; }
@@ -397,7 +396,7 @@ body::after {
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,0.16),
     0 4px 0 var(--wall),
-    0 6px 6px rgba(0,0,0,0.4),
+    0 5px 5px rgba(0,0,0,0.24),
     0 4px 12px 1px var(--glow, hsla(var(--hue), 92%, 60%, 0.5));
 }
 
@@ -411,7 +410,7 @@ body::after {
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,0.22),
     0 5px 0 var(--wall),                    /* front wall shortens as it presses */
-    0 8px 8px rgba(0,0,0,0.45),
+    0 6px 6px rgba(0,0,0,0.24),
     0 4px 14px 1px var(--glow, hsla(var(--hue), 92%, 60%, 0.5));
 }
 
@@ -547,8 +546,8 @@ body::after {
 
 /* running log of recent alerts */
 .exp-loghead {
-  font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
-  color: var(--ink-faint); margin-bottom: 8px;
+  font-size: 12.5px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase;
+  color: var(--ink-faint); margin-bottom: 9px;
 }
 .exp-log {
   list-style: none; margin: 0 0 12px; padding: 0;
@@ -566,16 +565,16 @@ body::after {
 .al-item.critical { border-left-color: var(--critical); }
 .al-head { display: flex; align-items: baseline; justify-content: space-between; }
 .al-sev {
-  font-size: 11px; font-weight: 600; text-transform: lowercase; color: var(--ink-dim);
+  font-size: 13px; font-weight: 600; text-transform: lowercase; color: var(--ink-dim);
 }
 .al-item.moderate .al-sev { color: var(--moderate); }
 .al-item.critical .al-sev { color: var(--critical); }
-.al-time { font-family: var(--mono); font-size: 10px; color: var(--ink-faint); }
+.al-time { font-family: var(--mono); font-size: 11px; color: var(--ink-faint); }
 .al-phrase {
-  font-family: var(--mono); font-size: 12px; color: var(--ink);
-  margin-top: 3px; line-height: 1.35; word-break: break-word;
+  font-family: var(--mono); font-size: 14px; color: var(--ink);
+  margin-top: 4px; line-height: 1.4; word-break: break-word;
 }
-.al-meta { font-family: var(--mono); font-size: 10.5px; color: var(--ink-faint); margin-top: 3px; }
+.al-meta { font-family: var(--mono); font-size: 12px; color: var(--ink-faint); margin-top: 4px; }
 .al-empty { font-size: 11.5px; color: var(--ink-faint); text-align: center; padding: 12px 0; }
 
 .exp-hint { font-family: var(--mono); font-size: 10.5px; color: var(--ink-faint); }

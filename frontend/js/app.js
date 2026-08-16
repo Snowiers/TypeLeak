@@ -99,6 +99,7 @@
     if (e.shiftKey && (e.ctrlKey || e.metaKey) && (e.key === "X" || e.key === "x")) {
       e.preventDefault();
       source.clearLatch();
+      exposure.clearLog();
     }
   });
 })(window.App);

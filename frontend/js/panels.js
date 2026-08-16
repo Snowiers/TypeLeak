@@ -194,6 +194,17 @@ window.App = window.App || {};
       this._renderLog();
     }
 
+    // Ctrl+Shift+X clears the running alert log (and resets the window).
+    clearLog() {
+      this.recent = [];
+      this.buf = "";
+      this.winRisk = 0;
+      this.winSev = "none";
+      this.winSpeech = false;
+      this.lastLogMs = 0;
+      this._renderLog();
+    }
+
     // The panel word reflects the latched worst severity.
     _severityClass() {
       if (this.latched && this.peak === "critical") return "critical";
