@@ -124,15 +124,29 @@ body::after {
   gap: 30px; padding: 40px 24px;
 }
 
+/* label + bar grouped; the pair drifts together with the mouse */
+.typed-wrap {
+  width: min(880px, 92vw);
+  display: flex; flex-direction: column; gap: 9px;
+  transform: translate3d(calc(var(--px) * 13px), calc(var(--py) * 9px), 0);
+  transition: transform .25s ease-out;
+}
+.listening {
+  display: flex; align-items: center; gap: 8px;
+  padding-left: 10px;
+  font-size: 13px; letter-spacing: .5px; color: var(--ink-faint);
+}
+@keyframes pulseDot { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(.78); } }
+.listening-ellipsis::after { content: "…"; animation: ellip 1.6s steps(1) infinite; }
+@keyframes ellip { 0% { content: ""; } 33% { content: "·"; } 66% { content: "··"; } 100% { content: "···"; } }
+
 /* live typed text — a soft, very round translucent-white bubble (no colored rim) */
 .typed-card {
-  width: min(880px, 92vw);
+  width: 100%;
   padding: 18px 24px;
   display: flex; align-items: flex-end; gap: 16px;
   border-radius: 40px;                 /* much rounder */
   border: 1px solid rgba(255, 255, 255, 0.6);
-  transform: translate3d(calc(var(--px) * 13px), calc(var(--py) * 9px), 0);
-  transition: transform .25s ease-out;
   background: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(18px) saturate(120%);
   -webkit-backdrop-filter: blur(18px) saturate(120%);
@@ -457,11 +471,11 @@ body::after {
 }
 .panel-head {
   display: flex; align-items: center; justify-content: space-between;
-  font-size: 12.5px; font-weight: 600; letter-spacing: .2px;
+  font-size: 16px; font-weight: 600; letter-spacing: .2px;
   color: var(--ink-dim); margin-bottom: 11px;
 }
 .mini-btn {
-  font-family: var(--font); font-size: 10px; color: var(--ink-faint);
+  font-family: var(--font); font-size: 13px; color: var(--ink-faint);
   background: none; border: 1px solid rgba(80,66,90,0.2); border-radius: 999px;
   padding: 3px 9px; cursor: pointer; transition: color .15s, border-color .15s;
 }
@@ -474,9 +488,9 @@ body::after {
   background: rgba(90,76,60,.06);
   display: flex; flex-direction: column; gap: 3px;
 }
-.hist-time { font-family: var(--mono); font-size: 11px; color: var(--ink-faint); }
-.hist-text { font-family: var(--mono); font-size: 13.5px; color: var(--ink-dim); word-break: break-word; }
-.hist-empty { font-size: 12px; color: var(--ink-faint); text-align: center; padding: 14px 0; }
+.hist-time { font-family: var(--mono); font-size: 12px; color: var(--ink-faint); }
+.hist-text { font-family: var(--mono); font-size: 14px; color: var(--ink-dim); word-break: break-word; }
+.hist-empty { font-size: 13px; color: var(--ink-faint); text-align: center; padding: 14px 0; }
 
 /* plain translucent-white panels — no colored outline */
 .history, .exposure-panel {
@@ -535,5 +549,5 @@ body::after {
 
 @media (max-width: 980px) {
   .history, .exposure-panel { display: none; }
-  .typed-card, .keyboard { width: 94vw; }
+  .typed-wrap, .keyboard { width: 94vw; }
 }
