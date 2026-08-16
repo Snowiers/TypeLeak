@@ -1,18 +1,13 @@
+# --- Python ---
 __pycache__/
 *.py[cod]
-.venv/
-venv/
-env/
-.pytest_cache/
-.idea/
-.vscode/
-
-# Recordings and datasets are large and belong to the model side, not the repo.
-labeled_dataset/
-*.wav
-
-# Working session recordings. The one take chosen for the demo belongs in
-# fixtures/ instead, committed, so the whole team replays the same stream.
-takes/
-
+*.swp
+*.swo
 .DS_Store
+
+backend/.env/
+.env/
+
+backend/last_session.json
+
+# backend/dataset/processed/

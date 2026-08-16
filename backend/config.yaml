@@ -1,0 +1,68 @@
+# ============================================================
+#  Acoustic keystroke data-collection config
+#  Everything tunable lives here. record.py and process.py
+#  both read this file.
+# ============================================================
+
+audio:
+  sample_rate: 44100      # Hz. 44100 matches the paper. Don't change between record & process.
+  channels: 1             # 1 = mono. (A phone/laptop mic is fine mono.)
+  blocksize: 1024         # audio callback block size. Smaller = tighter timing sync.
+
+recording:
+  # Which keys count as labels. Default = the paper's 36 (digits + lowercase letters).
+  # Anything not in this set is ignored (shift, space, etc.).
+  accepted_keys: "0123456789abcdefghijklmnopqrstuvwxyz"
+  guided_mode: true       # if true, prints a shuffled target string for you to type
+  reps_per_key: 25        # (guided mode) how many times each key appears in the target string
+  stop_key: "esc"         # press this to end a recording session
+
+spectrogram:
+  # --- the "how much detail" knobs ---
+  n_mels: 128 # frequency resolution (mel bands). Paper uses 64. Try 96/128 for more detail.
+  n_fft: 1024             # FFT window size. Larger = better freq res, worse time res.
+  hop_length: 128         # step between FFT frames. Smaller = more time detail (wider image).
+  fmin: 0                 # lowest frequency (Hz) to keep
+  fmax: 22050             # highest frequency (Hz). Keystroke energy is broadband; keep wide.
+
+clip:
+  # A keystroke "click" is short. We cut a fixed window around each detected onset.
+  clip_ms: 200            # length of audio kept per keystroke (milliseconds)
+  pre_onset_ms: 40        # how much of the clip sits BEFORE the onset (captures the attack transient)
+
+detection:
+  # Unsupervised acoustic onset detection (same code used at live inference).
+  # In process.py these detections are then LABELLED by matching to pynput timestamps.
+  frame_hop: 64           # samples per onset-envelope frame (smaller = finer time res)
+  min_gap_ms: 180         # keystrokes closer than this collapse to ONE commit (keeps the
+                          # first = the PRESS click; suppresses the release click ~80-150ms
+                          # later, which the model never trained on -> was causing 2-3 outputs
+                          # per key. Allows deliberate typing up to ~5 keys/sec.
+  sensitivity: 0.15       # peak threshold on the 0..1-normalized onset envelope (lower = more sensitive)
+  match_tolerance_ms: 120 # max gap to match a detected onset to a logged keypress (labelling only)
+  # ABSOLUTE loudness gate -- CRITICAL for live use. A real keystroke is loud;
+  # silence/room-noise is quiet. Reject any onset whose peak |amplitude| is below
+  # this. Fixes "silent room -> random predictions". Tune: set just above your
+  # room's noise-floor peak but below your keystroke peak (see notes below).
+  min_peak_amplitude: 0.012   # calibrated from Amazon-keyboard clips: keeps ~98-99% of real
+                             # keystrokes (peaks ~0.02-0.20) while sitting ~3-10x above the
+                             # background floor (~0.002-0.006). Raise if the DEMO room is
+                             # noisier; lower if it's dropping quiet keystrokes.
+  # Reject a prediction if the model's top softmax probability is below this
+  # (secondary filter for anything that slips past the loudness gate).
+  min_confidence: 0.30
+
+junk:
+  # "junk" reject-class: unmatched detections (release clicks, noise) + everything
+  # from ambient-only sessions become this class, so the model learns to REJECT
+  # non-keystrokes instead of forcing every sound into one of the 36 keys.
+  enabled: true
+  label: "junk"
+  max_per_session: 500     # cap junk clips per session (avoid class imbalance)
+
+output:
+  image_size: 128 # final square spectrogram size (image_size x image_size). 64 = paper.
+  save_npy: true          # float32 array for training (recommended)
+  save_wav: true
+  save_png: true          # grayscale image for eyeballing / demo
+  out_dir: "dataset"      # created next to this config

@@ -15,8 +15,12 @@
   <canvas id="stars" aria-hidden="true"></canvas>
 
   <header class="topbar">
-    <span class="brand" title="Acoustic Exposure Monitor — reconstructs typing from microphone sound to show how exposed it is">
+    <span class="brand" title="Acoustic keystroke recognizer — reconstructs typing live from microphone sound">
       appname
+    </span>
+    <span id="source-pill" class="source-pill connecting">
+      <span class="source-dot"></span>
+      <span id="source-text">connecting</span>
     </span>
   </header>
 
@@ -34,7 +38,7 @@
     <div class="typed-wrap">
       <div class="glass typed-card">
         <div id="typed" class="typed"></div>
-        <button id="finish" class="finish-btn">finish ↵</button>
+        <button id="finish" class="finish-btn" title="log this line now">finish ↵</button>
       </div>
     </div>
 
@@ -51,14 +55,30 @@
     </div>
   </main>
 
-  <!-- exposure readout: a quiet glass panel on the right saying why it's exposed -->
-  <aside id="exposure" class="glass exposure-panel secure">
-    <div class="exp-state" id="exp-state">secure</div>
-    <div class="exp-why" id="exp-why">typing sound is too ambiguous to reconstruct</div>
-    <div class="exp-meter"><div class="exp-meter-fill" id="exp-meter"></div></div>
-    <div class="exp-loghead">recent alerts</div>
-    <ul id="exp-log" class="exp-log"></ul>
-    <div class="exp-hint">⌃⇧X to clear</div>
+  <!-- LLM correction control panel on the right -->
+  <aside id="control" class="glass control-panel">
+    <div class="ctrl-head">correction</div>
+
+    <div class="ctrl-row">
+      <span class="ctrl-label">LLM correction</span>
+      <label class="switch" title="toggle live LLM spell-correction">
+        <input type="checkbox" id="llm-toggle" />
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <div class="ctrl-state" id="ctrl-state">correcting</div>
+    <div class="ctrl-status" id="ctrl-status">corrects the whole line when you pause typing</div>
+    <div class="ctrl-note" id="ctrl-note"></div>
+
+    <div class="ctrl-sep"></div>
+
+    <ul class="ctrl-facts">
+      <li><span>source</span><span id="ctrl-source">connecting…</span></li>
+      <li><span>corrects</span><span id="ctrl-cadence">on pause or finish</span></li>
+      <li><span>auto-log</span><span id="ctrl-idle">after silence</span></li>
+    </ul>
+    <div class="ctrl-hint">pause typing → the line is corrected, then logged on the left automatically</div>
   </aside>
 
   <script src="js/source.js"></script>

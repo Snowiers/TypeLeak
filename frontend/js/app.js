@@ -1,8 +1,9 @@
-/* Bootstrap: build panels, connect the source, route events.
+/* Bootstrap: build the panels, connect the live source, route events.
  *
- * Every panel couples only to the event schema. The alarm latches (stays lit until
- * acknowledged with Ctrl+Shift+X, also Cmd+Shift+X on macOS — window-focus only,
- * never a global OS hotkey). Finish captures the current typed text into the log.
+ * The server owns the decoded text and pushes it as `transcript` events; key
+ * flashes come as `key` events; idle auto-logging (and the finish button) arrive
+ * as `commit`. The LLM toggle round-trips through the backend, which echoes the
+ * authoritative `llm_state` back so the switch always reflects the real state.
  */
 (function (App) {
   "use strict";
@@ -10,31 +11,42 @@
   const ambient = new App.Ambient(document.getElementById("stars"));
   const keyboard = new App.Keyboard(document.getElementById("keyboard"));
   const transcript = new App.Transcript();
-  const exposure = new App.Exposure();
 
-  App._onMood = (mood) => ambient.setMood(mood);
-
+  // source pill in the top bar
   const sourcePill = document.getElementById("source-pill");
   const sourceText = document.getElementById("source-text");
   function setStatus({ mode }) {
-    if (!sourcePill || !sourceText) return;   // source pill removed from the top bar
-    sourcePill.className = "source-pill " + mode;
-    sourceText.textContent = { connecting: "connecting", live: "live", offline: "demo" }[mode] || mode;
+    if (sourcePill && sourceText) {
+      sourcePill.className = "source-pill " + mode;
+      sourceText.textContent =
+        { connecting: "connecting", live: "live", offline: "demo" }[mode] || mode;
+    }
+    control.setSource(mode);
   }
 
-  const source = App.connectSource({
-    onStatus: setStatus,
-    onState: (state) => exposure.applyState(state),
-    onEvent: (evt) => {
-      keyboard.hit(evt.key_top1, evt.confidence, evt.alert_severity); // brightness = confidence
-      transcript.push(evt);
-      exposure.applyEvent(evt);                                        // alarm = risk_score
-      ambient.pulse(evt.confidence);
-    },
+  // control panel needs the source to send toggles; source needs the panel to
+  // reflect state — wire them after both exist.
+  let source = null;
+  const control = new App.ControlPanel((enabled) => {
+    if (source) source.setLlm(enabled);
   });
 
-  // Finish → capture typed text into the persistent log.
-  document.getElementById("finish").addEventListener("click", () => transcript.finish());
+  source = App.connectSource({
+    onStatus: setStatus,
+    onReset: () => transcript.setText(""),
+    onKey: (evt) => {
+      keyboard.hit(evt.char, evt.confidence, "none");   // brightness = confidence
+      ambient.pulse(evt.confidence);
+    },
+    onTranscript: (text) => transcript.setText(text),
+    onCommit: (text) => transcript.commit(text),
+    onLlmState: (st) => control.setLlmState(st),
+  });
+
+  // finish → ask the server to finalize + log the current line now.
+  document.getElementById("finish").addEventListener("click", () => {
+    if (source && source.commit) source.commit();
+  });
   document.getElementById("clear-logs").addEventListener("click", () => transcript.clearLogs());
 
   // Keyboard design picker — cycle themes with the glass arrows (persisted).
@@ -92,14 +104,5 @@
     const y = (e.clientY / window.innerHeight - 0.5);
     document.body.style.setProperty("--px", x.toFixed(3));
     document.body.style.setProperty("--py", y.toFixed(3));
-  });
-
-  // Acknowledge / clear the latched alarm. Window-focus only.
-  window.addEventListener("keydown", (e) => {
-    if (e.shiftKey && (e.ctrlKey || e.metaKey) && (e.key === "X" || e.key === "x")) {
-      e.preventDefault();
-      source.clearLatch();
-      exposure.clearLog();
-    }
   });
 })(window.App);
