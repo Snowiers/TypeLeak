@@ -6,15 +6,15 @@
   --ink-dim: #9a9cb2;
   --ink-faint: #63667e;
 
-  --glass: rgba(255, 255, 255, 0.055);
-  --glass-brd: rgba(255, 255, 255, 0.10);
-  --glass-hi: rgba(255, 255, 255, 0.14);
+  --glass-brd: rgba(255, 255, 255, 0.30);
+  --glass-hi: rgba(255, 255, 255, 0.36);
 
   --key-face: rgba(255, 255, 255, 0.09);
   --key-brd: rgba(255, 255, 255, 0.11);
   --key-ink: #dfe1ea;
 
-  --cool: #9fc0ff;
+  --cool: #b7a8f2;        /* lavender — every key press, shaded by confidence */
+  --glass-edge: rgba(192, 182, 246, 0.32);   /* soft lavender glass rim */
   --secure: #86e5b4;
   --moderate: #f3ca74;
   --critical: #ff6b6b;
@@ -32,30 +32,48 @@ html, body { height: 100%; margin: 0; }
 body {
   font-family: var(--font);
   color: var(--ink);
-  background: linear-gradient(180deg, #101014 0%, #08080b 55%, #060608 100%);
+  /* dark, but faintly tinted blue→purple — flat and minimal, no glow */
+  background: linear-gradient(165deg, #14141f 0%, #101019 50%, #0d0b13 100%);
   overflow: hidden;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
 }
 
-#stars { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
-
-/* faint warm wash from the corner when the alarm is critical — kept subtle */
-body.alarm-critical::after {
-  content: ""; position: fixed; inset: 0; z-index: 1; pointer-events: none;
-  background: radial-gradient(70% 60% at 100% 100%, rgba(255, 107, 107, 0.10), transparent 70%);
-  animation: warmBreath 2.8s ease-in-out infinite;
+/* drifting, heavily-blurred streaks of colored light — the glassy backdrop */
+body::before {
+  content: "";
+  position: fixed; inset: -25%;
+  z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(38% 30% at 22% 26%, rgba(150, 110, 255, 0.55), transparent 62%),
+    radial-gradient(34% 40% at 80% 20%, rgba(80, 150, 255, 0.50), transparent 62%),
+    radial-gradient(44% 34% at 74% 80%, rgba(255, 110, 200, 0.48), transparent 62%),
+    radial-gradient(32% 30% at 26% 78%, rgba(120, 205, 255, 0.42), transparent 62%),
+    radial-gradient(30% 28% at 52% 50%, rgba(190, 120, 255, 0.34), transparent 65%);
+  filter: blur(72px) saturate(150%);
+  opacity: 0.62;
+  animation: aurora 26s ease-in-out infinite alternate;
 }
-@keyframes warmBreath { 0%, 100% { opacity: .6; } 50% { opacity: 1; } }
+@keyframes aurora {
+  0%   { transform: translate3d(-2%, 0, 0)  scale(1)    rotate(0deg); }
+  50%  { transform: translate3d(2%, -3%, 0) scale(1.12) rotate(4deg); }
+  100% { transform: translate3d(-1%, 2%, 0) scale(1.08) rotate(-3deg); }
+}
 
-/* --- glass primitive ---------------------------------------------------- */
+#stars { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
+
+/* --- glass primitive (shared by every panel AND the keyboard) ----------- */
 .glass {
-  background: var(--glass);
+  background: linear-gradient(155deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04));
   border: 1px solid var(--glass-brd);
   border-radius: var(--r-card);
-  backdrop-filter: blur(20px) saturate(130%);
-  -webkit-backdrop-filter: blur(20px) saturate(130%);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4), inset 0 1px 0 var(--glass-hi);
+  /* clear frosted glass that brightens + picks up the colored light behind it */
+  backdrop-filter: blur(22px) saturate(165%) brightness(1.08);
+  -webkit-backdrop-filter: blur(22px) saturate(165%) brightness(1.08);
+  box-shadow:
+    0 22px 54px rgba(0, 0, 0, 0.38),
+    inset 0 1px 0 var(--glass-hi),
+    inset 0 0 40px rgba(255, 255, 255, 0.05);
 }
 
 /* --- top bar ------------------------------------------------------------ */
@@ -72,11 +90,12 @@ body.alarm-critical::after {
   width: 7px; height: 7px; border-radius: 50%; background: var(--secure);
   box-shadow: 0 0 10px var(--secure);
 }
+.brand-mode { color: var(--ink-faint); font-size: 12px; margin-left: 4px; }
 .source-pill {
   display: flex; align-items: center; gap: 7px;
   font-size: 11px; color: var(--ink-faint);
   padding: 5px 11px; border-radius: 999px;
-  border: 1px solid var(--glass-brd); background: var(--glass);
+  border: 1px solid var(--glass-brd); background: rgba(255, 255, 255, 0.08);
 }
 .source-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ink-faint); }
 .source-pill.live { color: var(--secure); } .source-pill.live .source-dot { background: var(--secure); box-shadow: 0 0 8px var(--secure); }
@@ -123,11 +142,18 @@ body.alarm-critical::after {
 .keyboard-wrap { perspective: 1500px; display: flex; justify-content: center; }
 .keyboard {
   width: min(880px, 92vw);
-  display: flex; flex-direction: column; gap: 6px;
-  padding: 14px; border-radius: 22px;
-  background: rgba(255, 255, 255, 0.035);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 40px 80px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  display: flex; flex-direction: column; gap: 7px;
+  padding: 16px; border-radius: 26px;
+  /* same glass material as the panels — just larger and tilted */
+  background: linear-gradient(155deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--glass-brd);
+  backdrop-filter: blur(22px) saturate(165%) brightness(1.08);
+  -webkit-backdrop-filter: blur(22px) saturate(165%) brightness(1.08);
+  box-shadow:
+    0 44px 90px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 var(--glass-hi),
+    inset 0 0 46px rgba(255, 255, 255, 0.06),
+    inset 0 -18px 40px rgba(0, 0, 0, 0.12);
   transform: rotateX(9deg);
   animation: float 7s ease-in-out infinite;
   transform-style: preserve-3d;
@@ -142,18 +168,23 @@ body.alarm-critical::after {
   flex: 1;
   display: flex; align-items: center; justify-content: center;
   height: 46px; min-width: 0;
-  font-family: var(--font); font-size: 14px; color: var(--key-ink, #e2e3ec);
-  border-radius: var(--r-key);
-  background: var(--key-face);
-  border: 1px solid var(--key-brd);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.08), inset 0 -3px 6px rgba(0,0,0,.2);
-  transition: background .4s ease, box-shadow .4s ease, transform .35s cubic-bezier(.2,.9,.2,1), color .4s ease;
+  font-family: var(--font); font-size: 14px; color: #f1f3f8;
+  border-radius: 12px;
+  /* clear glass keycap: bright specular top edge; picks up the light behind */
+  background: linear-gradient(158deg, rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0.08));
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -7px 13px rgba(20, 20, 45, 0.2),
+    0 2px 6px rgba(0, 0, 0, 0.2);
+  transition: background .35s ease, box-shadow .3s ease,
+              transform .3s cubic-bezier(.2,.9,.2,1), color .3s ease, border-color .35s ease;
   --sev-c: var(--cool);
 }
 .row-fn .key { height: 26px; font-size: 10px; color: var(--ink-dim); }
 
 /* dual legends (number row, punctuation) */
-.key .sub { font-size: 9px; color: var(--ink-faint); line-height: 1; margin-bottom: 2px; }
+.key .sub { font-size: 9px; color: rgba(255, 255, 255, 0.5); line-height: 1; margin-bottom: 2px; }
 .key .main { font-size: 13px; line-height: 1; }
 .key:has(.sub) { flex-direction: column; justify-content: center; }
 
@@ -170,16 +201,19 @@ body.alarm-critical::after {
 .arrow-col .half { height: 20px; font-size: 8px; }
 
 /* flash on prediction: brightness = confidence (--i), tint = severity */
-.key[data-sev="moderate"] { --sev-c: var(--moderate); }
-.key[data-sev="critical"] { --sev-c: var(--critical); }
+/* every key press is lavender — confidence (--i) varies the shade/intensity,
+   not severity (that lives in the exposure panel instead) */
 .key.hit {
   color: #fff;
-  transform: translateY(-2px);
-  background: color-mix(in srgb, var(--sev-c) calc(24% + var(--i, .5) * 40%), var(--key-face));
+  transform: translateY(-3px) scale(1.03);
+  background: linear-gradient(158deg,
+    color-mix(in srgb, var(--sev-c) calc(45% + var(--i, .5) * 35%), rgba(255,255,255,.18)),
+    rgba(255,255,255,.06));
   border-color: var(--sev-c);
   box-shadow:
-    0 0 calc(8px + var(--i, .5) * 24px) var(--sev-c),
-    inset 0 1px 0 rgba(255,255,255,.3);
+    inset 0 1px 0 rgba(255,255,255,.55),
+    0 0 calc(10px + var(--i, .5) * 26px) var(--sev-c),
+    0 0 calc(22px + var(--i, .5) * 44px) color-mix(in srgb, var(--sev-c) 55%, transparent);
 }
 
 /* --- history (left) ----------------------------------------------------- */
@@ -211,58 +245,51 @@ body.alarm-critical::after {
 .hist-text { font-family: var(--mono); font-size: 12px; color: var(--ink-dim); word-break: break-word; }
 .hist-empty { font-size: 11px; color: var(--ink-faint); text-align: center; padding: 14px 0; }
 
-/* --- exposure overlay (bottom-right) ------------------------------------ */
-.alert-box {
-  position: fixed; right: 22px; bottom: 22px; z-index: 6;
-  width: 124px; height: 124px;
-  border-radius: 26px;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
-  cursor: pointer; user-select: none;
-  border: 1px solid var(--sev-c, var(--glass-brd));
+/* --- exposure panel (right) --------------------------------------------- */
+.exposure-panel {
+  position: fixed; right: 22px; top: 50%; transform: translateY(-50%); z-index: 4;
+  width: 210px;
+  padding: 16px; display: flex; flex-direction: column;
+  border-radius: 20px;
+  border: 1px solid var(--sev-c);
   transition: border-color .5s ease, box-shadow .5s ease;
-  --sev-c: rgba(134, 229, 180, .5);
+  --sev-c: var(--glass-brd);
 }
-.alert-box.secure   { --sev-c: rgba(134, 229, 180, .5);  box-shadow: 0 0 22px rgba(134,229,180,.15); }
-.alert-box.moderate { --sev-c: var(--moderate);          box-shadow: 0 0 26px rgba(243,202,116,.25); }
-.alert-box.critical { --sev-c: var(--critical);          box-shadow: 0 0 34px rgba(255,107,107,.4); animation: alertPulse 1.3s ease-in-out infinite; }
-@keyframes alertPulse { 0%, 100% { box-shadow: 0 0 26px rgba(255,107,107,.3); } 50% { box-shadow: 0 0 46px rgba(255,107,107,.6); } }
+.exposure-panel.secure   { --sev-c: rgba(134,229,180,.35); box-shadow: 0 0 22px rgba(134,229,180,.10), inset 0 1px 0 var(--glass-hi); }
+.exposure-panel.moderate { --sev-c: rgba(243,202,116,.55); box-shadow: 0 0 26px rgba(243,202,116,.16), inset 0 1px 0 var(--glass-hi); }
+.exposure-panel.critical { --sev-c: rgba(255,107,107,.70); box-shadow: 0 0 30px rgba(255,107,107,.22), inset 0 1px 0 var(--glass-hi); }
 
-.alert-state { font-size: 16px; font-weight: 600; letter-spacing: .3px; color: var(--sev-c); text-transform: lowercase; }
-.alert-box.secure .alert-state { color: var(--secure); }
-.alert-count { font-size: 11px; color: var(--ink-faint); }
-
-/* recent-alerts popover, opens upward on click */
-.alert-pop {
-  position: absolute; bottom: calc(100% + 10px); right: 0;
-  width: 230px; max-height: 260px; overflow-y: auto;
-  padding: 12px; border-radius: 18px;
-  background: rgba(18, 18, 24, 0.92);
-  border: 1px solid var(--glass-brd);
-  backdrop-filter: blur(20px);
-  box-shadow: 0 20px 50px rgba(0,0,0,.5);
-  opacity: 0; transform: translateY(8px) scale(.98); pointer-events: none;
-  transition: opacity .18s ease, transform .18s ease;
+.exp-head {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 12px; color: var(--ink-dim); margin-bottom: 14px;
 }
-.alert-box.open .alert-pop { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
-.alert-pop::-webkit-scrollbar { width: 5px; }
-.alert-pop::-webkit-scrollbar-thumb { background: rgba(255,255,255,.14); border-radius: 3px; }
-.alert-list { list-style: none; margin: 0 0 8px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-.al-item {
-  display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center;
-  padding: 7px 9px; border-radius: 11px;
-  background: rgba(255,255,255,.04); border-left: 3px solid var(--ink-faint);
-}
-.al-item.moderate { border-left-color: var(--moderate); }
-.al-item.critical { border-left-color: var(--critical); }
-.al-sev { font-size: 10px; text-transform: uppercase; letter-spacing: .5px; color: var(--ink-dim); }
-.al-item.moderate .al-sev { color: var(--moderate); }
-.al-item.critical .al-sev { color: var(--critical); }
-.al-risk { font-family: var(--mono); font-size: 10px; color: var(--ink-dim); }
-.al-time { font-family: var(--mono); font-size: 9px; color: var(--ink-faint); }
-.al-empty { font-size: 11px; color: var(--ink-faint); text-align: center; padding: 10px 0; }
-.pop-hint { font-family: var(--mono); font-size: 9px; color: var(--ink-faint); text-align: center; }
+.exp-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--sev-c); box-shadow: 0 0 8px var(--sev-c); }
+.exposure-panel.moderate .exp-dot,
+.exposure-panel.critical .exp-dot { animation: dotBlink 1.1s ease-in-out infinite; }
+@keyframes dotBlink { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
 
-@media (max-width: 780px) {
-  .history { display: none; }
+.exp-state {
+  font-size: 24px; font-weight: 600; letter-spacing: .3px; text-transform: lowercase;
+  color: var(--secure); margin-bottom: 9px;
+}
+.exposure-panel.moderate .exp-state { color: var(--moderate); }
+.exposure-panel.critical .exp-state { color: var(--critical); }
+
+.exp-why { font-size: 12px; line-height: 1.5; color: var(--ink-dim); margin-bottom: 16px; }
+
+/* live "how reconstructable was the latest keystroke" meter */
+.exp-meter { height: 6px; border-radius: 3px; background: rgba(255,255,255,.06); overflow: hidden; margin-bottom: 14px; }
+.exp-meter-fill {
+  height: 100%; width: 0%; border-radius: 3px;
+  background: var(--secure);
+  transition: width .25s ease, background .35s ease;
+}
+.exp-meter-fill.mid { background: var(--moderate); }
+.exp-meter-fill.hi  { background: var(--critical); }
+
+.exp-hint { font-family: var(--mono); font-size: 9px; color: var(--ink-faint); }
+
+@media (max-width: 980px) {
+  .history, .exposure-panel { display: none; }
   .typed-card, .keyboard { width: 94vw; }
 }

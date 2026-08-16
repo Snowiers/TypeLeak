@@ -4,9 +4,9 @@
  *  current text into the persistent session log (kept in localStorage so logs
  *  survive reloads). Correction is off per CLAUDE.md, so this is the raw stream.
  *
- *  Exposure — the small square overlay, bottom-right. Shows the latched state
- *  (secure / exposed / critical) and an alert count; click it to see recent alerts.
- *  confidence and risk_score stay visually distinct — risk drives the alarm.
+ *  Exposure — the glass panel on the right. Shows the latched state
+ *  (secure / exposed / critical), a short "why", and a live meter of the latest
+ *  keystroke's exposure. confidence and risk_score stay distinct — risk drives this.
  */
 window.App = window.App || {};
 (function (App) {
@@ -93,20 +93,25 @@ window.App = window.App || {};
   // ---- Exposure overlay --------------------------------------------------
   const SEV_RANK = { none: 0, moderate: 1, critical: 2 };
   const STATE_WORD = { secure: "secure", moderate: "exposed", critical: "critical" };
+  // short, human "why" — not too detailed
+  const WHY = {
+    secure: "typing sound is too ambiguous to reconstruct",
+    moderate: "individual keystrokes are acoustically identifiable",
+    critical: "typing is cleanly reconstructable from the audio",
+  };
+  const RISK_T = (App.risk && App.risk.RISK_THRESHOLD) || 0.55;
+  const CRIT_T = (App.risk && App.risk.CRITICAL_THRESHOLD) || 0.80;
 
   class Exposure {
     constructor() {
-      this.box = document.getElementById("alert");
-      this.stateEl = document.getElementById("alert-state");
-      this.countEl = document.getElementById("alert-count");
-      this.list = document.getElementById("alert-list");
+      this.panel = document.getElementById("exposure");
+      this.stateEl = document.getElementById("exp-state");
+      this.whyEl = document.getElementById("exp-why");
+      this.meter = document.getElementById("exp-meter");
 
-      this.latched = false;
-      this.peak = "none";
-      this.alerts = 0;
-      this.recent = [];
-
-      this.box.addEventListener("click", () => this.box.classList.toggle("open"));
+      this.latched = false;   // stays lit until cleared
+      this.peak = "none";     // worst severity since the last clear
+      this.lastRisk = 0;      // most recent keystroke's risk (drives the meter)
       this._render();
     }
 
@@ -114,24 +119,19 @@ window.App = window.App || {};
     applyState(state) {
       this.latched = !!state.latched;
       this.peak = state.peak_severity || "none";
-      this.alerts = state.total_alerts || 0;
-      this.recent = (state.recent_alerts || []).slice(0, 40);
       this._render();
-      this._renderList();
     }
 
     applyEvent(evt) {
+      this.lastRisk = evt.risk_score;
       if (evt.alert) {
-        this.alerts += 1;
         this.latched = true;
         if (SEV_RANK[evt.alert_severity] > SEV_RANK[this.peak]) this.peak = evt.alert_severity;
-        this.recent.unshift(evt);
-        if (this.recent.length > 40) this.recent.pop();
-        this._renderList();
       }
       this._render();
     }
 
+    // The panel word reflects the latched worst severity.
     _severityClass() {
       if (this.latched && this.peak === "critical") return "critical";
       if (this.latched && this.peak === "moderate") return "moderate";
@@ -140,48 +140,21 @@ window.App = window.App || {};
 
     _render() {
       const cls = this._severityClass();
-      this.box.classList.remove("secure", "moderate", "critical");
-      this.box.classList.add(cls);
+      this.panel.classList.remove("secure", "moderate", "critical");
+      this.panel.classList.add(cls);
       this.stateEl.textContent = STATE_WORD[cls];
-      this.countEl.textContent = this.alerts === 0 ? "watching" :
-        this.alerts + (this.alerts === 1 ? " alert" : " alerts");
+      this.whyEl.textContent = WHY[cls];
+
+      // meter reflects the latest keystroke's exposure, colored by its own band
+      const pct = Math.max(0, Math.min(1, this.lastRisk)) * 100;
+      this.meter.style.width = pct.toFixed(0) + "%";
+      this.meter.classList.remove("mid", "hi");
+      if (this.lastRisk > CRIT_T) this.meter.classList.add("hi");
+      else if (this.lastRisk > RISK_T) this.meter.classList.add("mid");
+
       document.body.classList.toggle("alarm-critical", cls === "critical");
       if (App._onMood) App._onMood(cls);
     }
-
-    _renderList() {
-      this.list.innerHTML = "";
-      if (this.recent.length === 0) {
-        const li = document.createElement("li");
-        li.className = "al-empty";
-        li.textContent = "no alerts yet";
-        this.list.appendChild(li);
-        return;
-      }
-      for (const evt of this.recent) {
-        const li = document.createElement("li");
-        li.className = "al-item " + evt.alert_severity;
-        const left = document.createElement("span");
-        left.className = "al-sev";
-        left.textContent = evt.alert_severity;
-        const mid = document.createElement("span");
-        mid.className = "al-risk";
-        mid.textContent = "risk " + evt.risk_score.toFixed(2);
-        const right = document.createElement("span");
-        right.className = "al-time";
-        right.textContent = fmtClock(evt.timestamp);
-        li.appendChild(left);
-        li.appendChild(mid);
-        li.appendChild(right);
-        this.list.appendChild(li);
-      }
-    }
-  }
-
-  function fmtClock(unixSeconds) {
-    const d = new Date(unixSeconds * 1000);
-    const p = (n) => String(n).padStart(2, "0");
-    return `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
   }
 
   App.Transcript = Transcript;

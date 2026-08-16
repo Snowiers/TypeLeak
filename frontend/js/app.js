@@ -28,7 +28,7 @@
       keyboard.hit(evt.key_top1, evt.confidence, evt.alert_severity); // brightness = confidence
       transcript.push(evt);
       exposure.applyEvent(evt);                                        // alarm = risk_score
-      ambient.pulse();
+      ambient.pulse(evt.confidence);
     },
   });
 
