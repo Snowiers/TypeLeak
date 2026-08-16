@@ -97,7 +97,7 @@ audio path above.
 
 ---
 
-## 1. Server — on the DGX Spark
+## Quick Start 1. Server — on the DGX Spark
 
 ```bash
 cd backend
@@ -129,7 +129,7 @@ Find the Spark's LAN IP with: `hostname -I`
 
 ---
 
-## 2. Client — on the Mac
+## Quick Start 2. Client — on the Mac
 
 ```bash
 # first time only: install the light audio deps (no torch/model needed here)
@@ -147,9 +147,38 @@ Microphone permission is needed — no Input Monitoring prompt).
 macOS: grant **Microphone** permission (and **Input Monitoring** if using eval mode).
 
 ---
+
+## Reproducing the demo
+
+The demo is a side-by-side of two windows: a terminal on the Mac running the
+client-side recorder, and a browser showing the live monitor served off the
+DGX Spark ("GN100"), with predictions appearing on the monitor as you type on
+the Mac.
+
+1. **Start the server on the Spark** (section 1 above), then open its web UI
+   on the monitor connected to (or mirroring) the Spark: `http://<spark-ip>:8080`.
+2. **Toggle LLM correction from the control panel** on that page before you
+   start typing:
+   - **LLM correction ON** — best for demoing on real words/sentences; raw
+     per-keystroke predictions get cleaned up into coherent text on each
+     typing pause.
+   - **LLM correction OFF** — best for demoing on gibberish/random keys;
+     shows the raw classifier output per keystroke with no language-model
+     smoothing.
+3. **Start the client on the Mac** (section 2 above) — this opens the mic
+   stream to the Spark.
+4. **Type on the Mac** in any app (or just into the terminal). Keystrokes are
+   classified from audio on the Spark and streamed back over SSE: watch the
+   monitor's on-screen keyboard flash each predicted key in real time, with
+   the decoded (and optionally LLM-corrected) line building up beside it.
+5. To switch modes mid-demo, just hit the LLM toggle again — it takes effect
+   on the next typing pause, no restart needed.
+
+---
 ## Datasets Used
 
-All data used to train the detection model was self-made, including 6,965 self-recorded keystrokes turned into spectograms. This can be found under backend/dataset/processed.
+All data used to train the detection model was self-made, including 6,965 self-recorded keystrokes turned into spectograms. This can be found under backend/dataset/processed. 
+Besides live inference, no other data was used.
 
 ## Known limitations
 
