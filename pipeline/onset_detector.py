@@ -1,97 +1,76 @@
 """
-Keystroke onset detection.
+Streaming wrapper around detector.py's detect_onsets().
 
-Keystrokes are short broadband transients (press click + release click).
-Spectral flux — the frame-to-frame increase in spectral energy, summed
-across frequency bins — is a standard, robust onset-detection signal for
-exactly this kind of percussive transient (it's the same core idea used in
-music onset detection for drum hits).
+detect_onsets() was written as a BATCH function (run once over a whole
+recorded session in process.py). To use it live, we periodically re-run it
+over a recent rolling window of audio pulled from the RingBuffer, rather
+than adapting it into a truly incremental algorithm -- this keeps us using
+the EXACT SAME detection code as training (the whole point, per detector.py's
+docstring), instead of a reimplementation that could drift from it.
 
-This module is deliberately stateful and incremental: it's designed to be
-fed a continuous stream of small audio chunks (as they arrive from the mic)
-rather than operating on a full pre-recorded file, so it can run live.
+Trade-off: onsets near the very end of the current analysis window may not
+be confirmed yet (librosa's peak-picking needs a bit of trailing audio
+context to confirm a peak is a true local max) -- they'll simply be found
+on the NEXT re-analysis once more audio has arrived, which is why we
+dedupe against previously-reported onsets rather than assuming each
+analysis pass is authoritative on its own.
 """
 
 from __future__ import annotations
 import numpy as np
-from collections import deque
 from dataclasses import dataclass
 
 import config
+import detector  # the real, shared detect_onsets/extract_clip/clip_to_melspec
 
 
 @dataclass
 class OnsetEvent:
     sample_index: int   # global/monotonic sample index of the detected onset
-    strength: float      # spectral flux value at detection (rough loudness proxy)
+    strength: float       # rough peak amplitude near the onset (informational only)
 
 
-class OnsetDetector:
+class StreamingOnsetDetector:
     def __init__(self,
                  sample_rate: int = config.SAMPLE_RATE,
-                 frame_ms: float = config.ONSET_FRAME_MS,
-                 hop_ms: float = config.ONSET_HOP_MS,
-                 history_frames: int = config.ONSET_HISTORY_FRAMES,
-                 threshold_k: float = config.ONSET_THRESHOLD_K,
-                 refractory_ms: float = config.ONSET_REFRACTORY_MS):
-        self.sample_rate = sample_rate
-        self.frame_len = int(sample_rate * frame_ms / 1000)
-        self.hop_len = int(sample_rate * hop_ms / 1000)
-        self.refractory_samples = int(sample_rate * refractory_ms / 1000)
+                 cfg: dict = config.DETECTOR_CFG,
+                 analysis_window_s: float = config.ONSET_ANALYSIS_WINDOW_S,
+                 reanalysis_interval_s: float = config.ONSET_REANALYSIS_INTERVAL_S):
+        self.sr = sample_rate
+        self.cfg = cfg
+        self.analysis_window_samples = int(analysis_window_s * sample_rate)
+        self.reanalysis_interval_samples = int(reanalysis_interval_s * sample_rate)
+        self.min_gap_samples = int(cfg["detection"]["min_gap_ms"] / 1000.0 * sample_rate)
 
-        self._window = np.hanning(self.frame_len).astype(np.float32)
-        self._flux_history = deque(maxlen=history_frames)
-        self._prev_spectrum: np.ndarray | None = None
+        self._last_analysis_at = 0       # total_written value at last analysis pass
+        self._last_reported_global = -10**9  # global sample index of last reported onset
 
-        self._sample_carry = np.zeros(0, dtype=np.float32)  # leftover samples < 1 frame
-        self._samples_consumed = 0   # global sample index of next frame start
-        self._last_onset_sample = -10**9
-
-        self.threshold_k = threshold_k
-
-    def _spectral_flux(self, frame: np.ndarray) -> float:
-        spec = np.abs(np.fft.rfft(frame * self._window))
-        if self._prev_spectrum is None:
-            self._prev_spectrum = spec
-            return 0.0
-        diff = spec - self._prev_spectrum
-        flux = np.sum(diff[diff > 0])  # only count energy increases
-        self._prev_spectrum = spec
-        return float(flux)
-
-    def process_chunk(self, chunk: np.ndarray, chunk_start_sample: int) -> list[OnsetEvent]:
-        """Feed the next chunk of raw audio (in stream order).
-
-        `chunk_start_sample` is the global sample index this chunk begins at
-        (i.e. RingBuffer.total_written() *before* this chunk was appended) —
-        needed so onset events carry a global index usable for later lookback.
+    def maybe_process(self, ring_buffer) -> list[OnsetEvent]:
+        """Call this after every chunk is appended to the ring buffer. Returns
+        newly-confirmed onsets (usually empty -- only fires roughly every
+        `reanalysis_interval_s`, and only for genuinely new onsets).
         """
+        total = ring_buffer.total_written()
+        if total - self._last_analysis_at < self.reanalysis_interval_samples:
+            return []
+        self._last_analysis_at = total
+
+        window_start = max(0, total - self.analysis_window_samples)
+        audio = ring_buffer.read_absolute_range(window_start, total)
+        if audio is None or len(audio) < config.FRAME_HOP * 4:
+            return []  # not enough audio yet for a meaningful analysis pass
+
+        onset_samples_relative = detector.detect_onsets(audio, self.sr, self.cfg)
+
         events: list[OnsetEvent] = []
-        data = np.concatenate([self._sample_carry, chunk])
-        # base global index of `data[0]`
-        base_index = chunk_start_sample - len(self._sample_carry)
+        for s_rel in onset_samples_relative:
+            s_global = window_start + s_rel
+            if s_global - self._last_reported_global < self.min_gap_samples:
+                continue  # duplicate re-detection (overlapping window) or too close to previous
+            w0 = max(0, s_rel - int(0.005 * self.sr))
+            w1 = min(len(audio), s_rel + int(0.02 * self.sr))
+            strength = float(np.max(np.abs(audio[w0:w1]))) if w1 > w0 else 0.0
+            events.append(OnsetEvent(sample_index=s_global, strength=strength))
+            self._last_reported_global = s_global
 
-        n_frames = 1 + (len(data) - self.frame_len) // self.hop_len if len(data) >= self.frame_len else 0
-        for i in range(n_frames):
-            start = i * self.hop_len
-            frame = data[start:start + self.frame_len]
-            frame_global_start = base_index + start
-            flux = self._spectral_flux(frame)
-
-            if len(self._flux_history) >= 4:  # need a little history before judging
-                local_mean = float(np.mean(self._flux_history))
-                local_std = float(np.std(self._flux_history))
-                threshold = local_mean + self.threshold_k * local_std
-                onset_sample = frame_global_start + self.frame_len // 2
-
-                if (flux > threshold and flux > 1e-6 and
-                        onset_sample - self._last_onset_sample >= self.refractory_samples):
-                    events.append(OnsetEvent(sample_index=onset_sample, strength=flux))
-                    self._last_onset_sample = onset_sample
-
-            self._flux_history.append(flux)
-
-        # keep leftover tail for next call
-        consumed = n_frames * self.hop_len if n_frames > 0 else 0
-        self._sample_carry = data[consumed:]
         return events

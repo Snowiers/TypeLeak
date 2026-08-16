@@ -1,47 +1,47 @@
 """
-Feature extraction: turns a short raw-audio window around a detected onset
-into a log-mel spectrogram, the standard input representation for the CNN
-classifier (this matches the representation used in the published acoustic
-keystroke research this project is based on).
+Feature extraction -- now a thin wrapper around detector.py's REAL
+extract_clip() and clip_to_melspec(), the exact same functions process.py
+used to build the training dataset. No more guessed normalization/resize
+logic -- this replaces the earlier placeholder version.
 """
 
 from __future__ import annotations
 import numpy as np
 import torch
-import torchaudio
 
 import config
+import detector
 
 
 class MelFeatureExtractor:
-    def __init__(self,
-                 sample_rate: int = config.SAMPLE_RATE,
-                 n_mels: int = config.N_MELS,
-                 n_fft: int = config.N_FFT,
-                 hop_length: int = config.HOP_LENGTH):
+    def __init__(self, sample_rate: int = config.SAMPLE_RATE, cfg: dict = config.DETECTOR_CFG):
         self.sample_rate = sample_rate
-        self._transform = torchaudio.transforms.MelSpectrogram(
-            sample_rate=sample_rate,
-            n_fft=n_fft,
-            hop_length=hop_length,
-            n_mels=n_mels,
-        )
-        self._to_db = torchaudio.transforms.AmplitudeToDB(top_db=80)
+        self.cfg = cfg
+        self.image_size = cfg["output"]["image_size"]
 
-    def extract(self, audio_window: np.ndarray) -> torch.Tensor:
-        """audio_window: 1D float32 numpy array -> returns [1, n_mels, T] tensor,
-        normalized to roughly zero-mean/unit-std for stable training/inference.
+    def build_clip(self, audio_containing_onset: np.ndarray, onset_sample_relative: int) -> np.ndarray:
+        """audio_containing_onset: a 1D array that CONTAINS the onset at the
+        given relative sample index (with enough context before/after --
+        detector.extract_clip() zero-pads automatically if it doesn't).
+        Returns the fixed-length raw audio clip (same as training).
         """
-        wav = torch.from_numpy(audio_window).float().unsqueeze(0)  # [1, samples]
-        mel = self._transform(wav)          # [1, n_mels, T]
-        mel_db = self._to_db(mel)
-        mel_db = (mel_db - mel_db.mean()) / (mel_db.std() + 1e-6)
-        return mel_db
+        return detector.extract_clip(audio_containing_onset, onset_sample_relative,
+                                      self.sample_rate, self.cfg)
+
+    def extract(self, clip: np.ndarray) -> torch.Tensor:
+        """clip: fixed-length raw audio clip from build_clip().
+        Returns a [3, image_size, image_size] tensor ready for KeyClassifier.predict()
+        -- mel-spectrogram via detector.clip_to_melspec() (IDENTICAL to training),
+        then repeated to 3 channels (matches train.py's KeystrokeDataset exactly).
+        """
+        spec = detector.clip_to_melspec(clip, self.sample_rate, self.cfg)  # [image_size, image_size], float32 in [0,1]
+        t = torch.from_numpy(spec).unsqueeze(0).repeat(3, 1, 1)  # [3, image_size, image_size]
+        return t
 
     def snr_estimate(self, audio_window: np.ndarray, noise_floor_rms: float) -> float:
         """Rough signal-to-noise ratio estimate for this event, in dB.
-        `noise_floor_rms` should come from a rolling ambient-noise tracker
-        (see exposure.py) so this reflects *current* room conditions.
+        Independent of the model-input pipeline above -- used only for
+        exposure scoring, not classification.
         """
         signal_rms = float(np.sqrt(np.mean(np.square(audio_window)) + 1e-12))
         noise_floor_rms = max(noise_floor_rms, 1e-6)

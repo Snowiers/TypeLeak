@@ -50,7 +50,8 @@ def main():
     def on_event(event):
         detected_events.append(event)
         print(f"  [event] t~{event['sample_index']/config.SAMPLE_RATE:.3f}s  "
-              f"zone={event['predicted_zone']:<20s} conf={event['zone_confidence']:.2f}  "
+              f"key={event['predicted_key']:<6s} conf={event['confidence']:.2f}  "
+              f"junk={event['is_junk']}  low_conf={event['below_confidence_threshold']}  "
               f"snr={event['snr_db']:5.1f}dB  exposure={event['exposure_score']:.1f}  "
               f"(model_trained={event['model_trained']})")
 

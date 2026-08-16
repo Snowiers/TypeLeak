@@ -1,7 +1,9 @@
 """
 The streaming pipeline: wires audio input -> ring buffer -> onset detection
--> feature extraction -> classification -> exposure scoring, and exposes a
-callback hook for a dashboard/UI to consume live events.
+(detector.py's real algorithm, streamed -- see onset_detector.py) ->
+feature extraction (detector.py's real extract_clip/clip_to_melspec) ->
+classification (the real trained EfficientNetV2, or an untrained fallback)
+-> exposure scoring, and exposes a callback hook for a dashboard/UI.
 
 Usage (live mic, on the demo machine):
 
@@ -30,9 +32,9 @@ import numpy as np
 
 import config
 from audio_io import RingBuffer
-from onset_detector import OnsetDetector, OnsetEvent
+from onset_detector import StreamingOnsetDetector, OnsetEvent
 from features import MelFeatureExtractor
-from model import ZoneClassifier
+from model import KeyClassifier
 from exposure import ExposureScorer, NoiseFloorTracker
 
 
@@ -40,31 +42,32 @@ class AcousticGuardPipeline:
     def __init__(self, on_event: Optional[Callable[[dict], None]] = None,
                  checkpoint_path: Optional[str] = config.MODEL_CHECKPOINT_PATH):
         self.ring_buffer = RingBuffer()
-        self.onset_detector = OnsetDetector()
+        self.onset_detector = StreamingOnsetDetector()
         self.feature_extractor = MelFeatureExtractor()
-        self.classifier = ZoneClassifier(checkpoint_path=checkpoint_path)
+        self.classifier = KeyClassifier(checkpoint_path=checkpoint_path)
         self.exposure_scorer = ExposureScorer()
         self.noise_tracker = NoiseFloorTracker()
         self.on_event = on_event or (lambda event: None)
 
-        self._pre_samples = int(config.SAMPLE_RATE * config.PRE_ONSET_MS / 1000)
-        self._post_samples = int(config.SAMPLE_RATE * config.POST_ONSET_MS / 1000)
+        clip_samples = int(config.SAMPLE_RATE * config.CLIP_MS / 1000)
+        pre_samples = int(config.SAMPLE_RATE * config.PRE_ONSET_MS / 1000)
+        self._post_samples = clip_samples - pre_samples  # audio needed AFTER onset
+        self._pre_samples = pre_samples
 
-        # onsets we've detected but whose full post-onset window isn't
-        # available in the ring buffer yet — processed once enough audio
-        # has arrived.
+        # onsets confirmed by the onset detector but whose full clip window
+        # isn't available in the ring buffer yet
         self._pending: list[OnsetEvent] = []
 
     def _handle_chunk(self, chunk: np.ndarray) -> None:
-        chunk_start = self.ring_buffer.total_written()
         self.ring_buffer.append(chunk)
 
-        new_onsets = self.onset_detector.process_chunk(chunk, chunk_start)
+        new_onsets = self.onset_detector.maybe_process(self.ring_buffer)
         if new_onsets:
             self._pending.extend(new_onsets)
         else:
-            # only update the ambient noise floor on chunks with no onset,
-            # so keystroke transients don't pollute the "quiet room" estimate
+            # only update the ambient noise floor when nothing new was
+            # detected this pass, so keystroke transients don't pollute
+            # the "quiet room" estimate
             self.noise_tracker.update(chunk)
 
         self._process_pending()
@@ -74,35 +77,50 @@ class AcousticGuardPipeline:
         total_written = self.ring_buffer.total_written()
 
         for onset in self._pending:
-            window_start = onset.sample_index - self._pre_samples
             window_end = onset.sample_index + self._post_samples
-
             if window_end > total_written:
-                still_pending.append(onset)  # not enough audio yet, try again later
+                still_pending.append(onset)  # not enough trailing audio yet
                 continue
 
-            audio_window = self.ring_buffer.read_absolute_range(max(window_start, 0), window_end)
-            if audio_window is None:
-                continue  # fell out of the ring buffer (shouldn't normally happen)
+            # read a bit more context than strictly needed on both sides so
+            # detector.extract_clip() (which expects "audio" containing the
+            # onset with room around it) never needs to zero-pad unless
+            # we're genuinely near a real stream boundary
+            read_start = max(0, onset.sample_index - self._pre_samples)
+            read_end = min(total_written, window_end)
+            audio_slice = self.ring_buffer.read_absolute_range(read_start, read_end)
+            if audio_slice is None:
+                continue  # fell out of the ring buffer -- shouldn't normally happen
+            onset_relative = onset.sample_index - read_start
 
-            self._classify_and_score(onset, audio_window)
+            self._classify_and_score(onset, audio_slice, onset_relative)
 
         self._pending = still_pending
 
-    def _classify_and_score(self, onset: OnsetEvent, audio_window: np.ndarray) -> None:
-        mel = self.feature_extractor.extract(audio_window)
-        zone, confidence, probs = self.classifier.predict(mel)
-        snr_db = self.feature_extractor.snr_estimate(audio_window, self.noise_tracker.rms)
+    def _classify_and_score(self, onset: OnsetEvent, audio_slice: np.ndarray,
+                            onset_relative: int) -> None:
+        clip = self.feature_extractor.build_clip(audio_slice, onset_relative)
+        image = self.feature_extractor.extract(clip)
+        label, confidence, probs = self.classifier.predict(image)
+        snr_db = self.feature_extractor.snr_estimate(clip, self.noise_tracker.rms)
 
-        self.exposure_scorer.add_event(zone=zone, confidence=confidence, snr_db=snr_db)
+        below_confidence = confidence < config.MIN_PREDICTION_CONFIDENCE
+        # "junk" is a real trained class (release clicks / non-keystroke
+        # sounds) -- exclude it from the exposure score.
+        is_junk = label == "junk"
+
+        if not below_confidence and not is_junk:
+            self.exposure_scorer.add_event(zone=label, confidence=confidence, snr_db=snr_db)
         score_info = self.exposure_scorer.current_score()
 
         event = {
             "timestamp": time.time(),
             "sample_index": onset.sample_index,
             "onset_strength": onset.strength,
-            "predicted_zone": zone,
-            "zone_confidence": round(confidence, 3),
+            "predicted_key": label,
+            "confidence": round(confidence, 3),
+            "below_confidence_threshold": below_confidence,
+            "is_junk": is_junk,
             "snr_db": round(snr_db, 1),
             "exposure_score": score_info["exposure_score"],
             "zone_breakdown": score_info["zone_breakdown"],
@@ -111,7 +129,7 @@ class AcousticGuardPipeline:
         self.on_event(event)
 
     def run(self, audio_source) -> None:
-        """Blocking call — starts consuming from the given audio source
+        """Blocking call -- starts consuming from the given audio source
         (MicAudioSource or ArrayAudioSource, see audio_io.py).
         """
         audio_source.stream(self._handle_chunk)

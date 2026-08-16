@@ -1,4 +1,4 @@
-# Acoustic Guard — Streaming Pipeline
++6b22222hjhhhhzzxzzzs# Acoustic Guard — Streaming Pipeline
 
 Real-time audio → onset detection → mel-spectrogram → CNN zone classifier →
 rolling exposure score. See the project doc for the full system design and
@@ -58,7 +58,7 @@ pipeline.run(MicAudioSource())   # blocks; Ctrl+C to stop
      with what the live pipeline produces (important — don't build a
      separate offline feature pipeline that could drift from this one).
    - Standard train/val split, cross-entropy loss, save with
-     `torch.save(model.state_dict(), path)`.
+     `torch.save(model.state_dict(), path)` .
    - Point `config.MODEL_CHECKPOINT_PATH` at the saved file, or pass
      `checkpoint_path=...` to `AcousticGuardPipeline`.
    - **Record supplementary data on your actual demo keyboard/mic** —
