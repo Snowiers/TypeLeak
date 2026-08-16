@@ -117,10 +117,10 @@ window.App = window.App || {};
       } else {
         el.textContent = spec.main;
       }
-      if (spec.code !== undefined) {
-        this.map[spec.code] = el;
-        el.dataset.k = spec.code;   // lets CSS put cute stickers on specific keys
-      }
+      if (spec.code !== undefined) this.map[spec.code] = el;
+      // data-k lets CSS target specific keys (stickers, the blush heart, etc.);
+      // letters/space use their code, other keys use their main legend (e.g. "6")
+      el.dataset.k = spec.code !== undefined ? spec.code : spec.main;
       return el;
     }
 

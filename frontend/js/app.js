@@ -42,6 +42,7 @@
     { id: "rgb", name: "Aurora RGB" },
     { id: "cloud", name: "Cloud" },
     { id: "lily", name: "Lilypad" },
+    { id: "blush", name: "Blush" },
   ];
   const kb = document.getElementById("keyboard");
   const themeLabel = document.getElementById("theme-name");

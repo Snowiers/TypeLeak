@@ -16,11 +16,11 @@
 
   --cool: #b7a8f2;        /* lavender — every key press, shaded by confidence */
   --glass-edge: rgba(192, 182, 246, 0.32);   /* soft lavender glass rim */
-  --secure: #2f9e6b;      /* darkened so they read on light panels */
-  --moderate: #c58a22;
-  --critical: #d1495b;
+  --secure: #3bb17c;      /* slightly lighter, still readable on light panels */
+  --moderate: #d69c33;
+  --critical: #df6579;
 
-  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, system-ui, sans-serif;
+  --font: "Ubuntu", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
 
   --r-card: 24px;
@@ -51,20 +51,26 @@ body {
 body::before {
   content: "";
   position: fixed; inset: -4%; z-index: 0; pointer-events: none;
-  background-image: radial-gradient(rgba(90, 76, 60, 0.05) 1px, transparent 1.4px);
-  background-size: 28px 28px;
+  background-image: radial-gradient(rgba(84, 70, 56, 0.045) 1.1px, transparent 1.6px);
+  background-size: 26px 26px;
   transform: translate3d(calc(var(--px) * 18px), calc(var(--py) * 18px), 0);
   transition: transform .3s ease-out;
 }
-/* soft light bloom + edge shading (drifts opposite the dots → depth) */
+/* soft pastel blobs drifting behind everything — the airy neo-glass vibe */
 body::after {
   content: "";
-  position: fixed; inset: -4%; z-index: 0; pointer-events: none;
+  position: fixed; inset: -12%; z-index: 0; pointer-events: none;
   background:
-    radial-gradient(62% 54% at 50% 40%, rgba(255, 255, 255, 0.45), transparent 70%),
-    radial-gradient(130% 116% at 50% 42%, transparent 60%, rgba(80, 66, 90, 0.10) 100%);
+    radial-gradient(62% 54% at 50% 40%, rgba(255, 255, 255, 0.45), transparent 70%),                   
+    radial-gradient(130% 116% at 50% 42%, transparent 60%, rgba(80, 66, 90, 0.10) 100%);  
+  filter: blur(64px);
   transform: translate3d(calc(var(--px) * -44px), calc(var(--py) * -44px), 0);
   transition: transform .3s ease-out;
+  animation: blobDrift 26s ease-in-out infinite alternate;
+}
+@keyframes blobDrift {
+  0%   { background-position: 0 0, 0 0, 0 0, 0 0; }
+  100% { background-position: 3% -3%, -3% 2%, 2% 3%, -2% -2%; }
 }
 
 #stars { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
@@ -118,23 +124,19 @@ body::after {
   gap: 30px; padding: 40px 24px;
 }
 
-/* live typed text — a soft rounded bubble with a calm two-tone rim (no rainbow) */
+/* live typed text — a soft, very round translucent-white bubble (no colored rim) */
 .typed-card {
   width: min(880px, 92vw);
-  padding: 18px 22px;
+  padding: 18px 24px;
   display: flex; align-items: flex-end; gap: 16px;
-  border-radius: 28px;                 /* rounder = bubble */
-  border: 2px solid transparent;
+  border-radius: 40px;                 /* much rounder */
+  border: 1px solid rgba(255, 255, 255, 0.6);
   transform: translate3d(calc(var(--px) * 13px), calc(var(--py) * 9px), 0);
   transition: transform .25s ease-out;
-  background:
-    linear-gradient(rgba(255, 253, 248, 0.92), rgba(250, 246, 239, 0.92)) padding-box,
-    linear-gradient(135deg, #d9ab86, #d295a6) border-box;   /* warm rim */
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.8),
-    0 10px 26px rgba(70, 58, 82, 0.16),
-    0 0 16px rgba(217, 171, 134, 0.18);
-  backdrop-filter: none;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(18px) saturate(120%);
+  -webkit-backdrop-filter: blur(18px) saturate(120%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
 }
 .typed {
   flex: 1; min-width: 0;
@@ -148,12 +150,14 @@ body::after {
 .typed::-webkit-scrollbar-thumb { background: rgba(80,66,90,.25); border-radius: 3px; }
 .finish-btn {
   flex: 0 0 auto;
-  font-family: var(--font); font-size: 13px; color: var(--ink);
-  padding: 9px 16px; border-radius: 999px;
-  border: 1px solid rgba(80,66,90,0.2); background: rgba(80,66,90,0.06);
-  cursor: pointer; transition: background .18s ease, transform .1s ease;
+  font-family: var(--font); font-size: 13px; font-weight: 600; color: #fff;
+  padding: 9px 18px; border-radius: 999px;
+  border: none;
+  background: #d68fa6;                        /* solid dusty rose — matches the warm palette */
+  box-shadow: 0 5px 14px rgba(200, 130, 160, 0.32);
+  cursor: pointer; transition: filter .18s ease, transform .1s ease;
 }
-.finish-btn:hover { background: rgba(80,66,90,0.12); }
+.finish-btn:hover { filter: brightness(1.06); }
 .finish-btn:active { transform: scale(.96); }
 
 /* --- keyboard ----------------------------------------------------------- */
@@ -183,20 +187,19 @@ body::after {
 
 /* dress the tray as a solid mechanical case (overrides the glass look above) */
 .keyboard {
-  /* ---- default theme: Aurora RGB (dark caps + rainbow underglow) ---- */
-  /* every cap is the SAME neutral dark grey — the color comes from the RGB glow */
-  --cap-top: #2f2f34;   --cap-wall: #1b1b1f;
-  --cap-top-sub: #2f2f34; --cap-wall-sub: #1b1b1f;
-  --cap-top-mod: #2f2f34;  --cap-wall-mod: #1b1b1f;
-  --cap-top-acc: #2f2f34;  --cap-wall-acc: #1b1b1f;
-  --cap-top-acc3: #2f2f34; --cap-wall-acc3: #1b1b1f;
-  --cap-legend: #d8d8dd;
+  /* ---- default theme: Aurora RGB — CREAM caps with rainbow LED glowing around them
+     (matches the cream screen but keeps the RGB identity) ---- */
+  --cap-top: #f2efe8;   --cap-wall: #d4cec2;         /* clean off-white, neutral wall (not muddy tan) */
+  --cap-top-sub: #f2efe8; --cap-wall-sub: #d4cec2;
+  --cap-top-mod: #f2efe8;  --cap-wall-mod: #d4cec2;
+  --cap-top-acc: #f2efe8;  --cap-wall-acc: #d4cec2;
+  --cap-top-acc3: #f2efe8; --cap-wall-acc3: #d4cec2;
+  --cap-legend: #4c4842;
   --rgb-a: 0.5;                                       /* RGB glow strength */
-  /* softer charcoal case (less harsh than near-black on the cream) */
-  --case: linear-gradient(180deg, #37323f 0%, #2e2933 55%, #272330 100%);
-  --case-lip: #201b28;
-  --case-shade: rgba(0, 0, 0, 0.42);                  /* plate recess shading */
-  --case-hi: rgba(255, 255, 255, 0.14);
+  --case: linear-gradient(180deg, #d3ccbe 0%, #c9c1b1 55%, #bfb7a5 100%);  /* soft neutral tray */
+  --case-lip: #a49a86;
+  --case-shade: rgba(90, 78, 50, 0.2);
+  --case-hi: rgba(255, 255, 255, 0.5);
 
   background: var(--case);
   border: none;
@@ -225,19 +228,52 @@ body::after {
   --case-shade: rgba(66, 66, 78, 0.16);
   --case-hi: rgba(255, 255, 255, 0.5);
 }
-/* ---- theme: Lilypad (light + dark greens, frog/pond vibe, no RGB) ---- */
+/* ---- theme: Lilypad (soft greens on a LIGHT sage frame, no RGB) ---- */
 .keyboard[data-theme="lily"] {
-  --cap-top: #d4dfc5;   --cap-wall: #aebf9b;          /* soft, muted light green */
-  --cap-top-sub: #ccd8bc; --cap-wall-sub: #a4b790;
-  --cap-top-mod: #bccfa7;  --cap-wall-mod: #93aa79;   /* accent 1 — gentle mid green */
-  --cap-top-acc: #557a43;  --cap-wall-acc: #38562c;   /* accent 2 — dark green (Esc/arrows) */
-  --cap-top-acc3: #e2bac9; --cap-wall-acc3: #b98ea2;  /* accent 3 — dusty lily pink (WASD) */
-  --cap-legend: #35412a;
+  --cap-top: #e2ecd4;   --cap-wall: #bccaa4;          /* light leaf green */
+  --cap-top-sub: #dbe6cb; --cap-wall-sub: #b3c29b;
+  --cap-top-mod: #c6d6ac;  --cap-wall-mod: #a0b482;   /* accent 1 — gentle mid green */
+  --cap-top-acc: #8fb46f;  --cap-wall-acc: #6b9150;   /* accent 2 — deeper green (Esc/arrows) */
+  --cap-top-acc3: #eec2cd; --cap-wall-acc3: #cf9aa8;  /* accent 3 — soft blush (WASD) */
+  --cap-legend: #46543a;
   --rgb-a: 0;
-  --case: linear-gradient(180deg, #3a4631 0%, #313c29 60%, #2a3323 100%);  /* soft muted pond green */
-  --case-lip: #18210f;
-  --case-shade: rgba(0, 0, 0, 0.36);
-  --case-hi: rgba(255, 255, 255, 0.09);
+  --case: linear-gradient(180deg, #d3ddbf 0%, #c8d3b2 55%, #bec9a6 100%);  /* light sage frame */
+  --case-lip: #a8b58c;
+  --case-shade: rgba(90, 100, 66, 0.16);
+  --case-hi: rgba(255, 255, 255, 0.5);
+}
+/* ---- theme: Blush (peach-pink base, rosy accents forming a heart, no RGB) ---- */
+.keyboard[data-theme="blush"] {
+  --cap-top: #f7d7d1;   --cap-wall: #e0b3ac;          /* soothing light peach-pink */
+  --cap-top-sub: #f7d7d1; --cap-wall-sub: #e0b3ac;
+  --cap-top-mod: #f7d7d1;  --cap-wall-mod: #e0b3ac;   /* specials share the base */
+  --cap-top-acc: #f7d7d1;  --cap-wall-acc: #e0b3ac;
+  --cap-top-acc3: #f7d7d1; --cap-wall-acc3: #e0b3ac;
+  --heart-top: #e08fa2;   --heart-wall: #bd6c80;      /* darker rosy blush for the heart */
+  --cap-legend: #7c4a53;
+  --rgb-a: 0;
+  --case: linear-gradient(180deg, #f3d4d4 0%, #ebc8c8 55%, #e3bcbc 100%);  /* light rose frame */
+  --case-lip: #cfa4a4;
+  --case-shade: rgba(150, 90, 100, 0.14);
+  --case-hi: rgba(255, 255, 255, 0.55);
+}
+/* the heart: these keys light up in the rosy accent, forming a heart shape */
+.keyboard[data-theme="blush"] .key[data-k="6"],
+.keyboard[data-theme="blush"] .key[data-k="7"],
+.keyboard[data-theme="blush"] .key[data-k="9"],
+.keyboard[data-theme="blush"] .key[data-k="0"],
+.keyboard[data-theme="blush"] .key[data-k="t"],
+.keyboard[data-theme="blush"] .key[data-k="y"],
+.keyboard[data-theme="blush"] .key[data-k="u"],
+.keyboard[data-theme="blush"] .key[data-k="i"],
+.keyboard[data-theme="blush"] .key[data-k="o"],
+.keyboard[data-theme="blush"] .key[data-k="p"],
+.keyboard[data-theme="blush"] .key[data-k="h"],
+.keyboard[data-theme="blush"] .key[data-k="j"],
+.keyboard[data-theme="blush"] .key[data-k="k"],
+.keyboard[data-theme="blush"] .key[data-k="n"],
+.keyboard[data-theme="blush"] .key[data-k="m"] {
+  --top: var(--heart-top); --wall: var(--heart-wall);
 }
 
 .kb-row { display: flex; gap: 5px; align-items: stretch; }
@@ -365,17 +401,15 @@ body::after {
   width: 42px; height: 42px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   font-size: 20px; line-height: 1; color: var(--ink);
-  border: 1.5px solid transparent;
-  background:
-    linear-gradient(rgba(255, 253, 248, 0.85), rgba(250, 245, 238, 0.85)) padding-box,
-    linear-gradient(135deg, #d9ab86, #d295a6) border-box;
-  backdrop-filter: blur(14px) saturate(140%);
-  -webkit-backdrop-filter: blur(14px) saturate(140%);
-  box-shadow: 0 8px 18px rgba(70, 58, 82, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(14px) saturate(120%);
+  -webkit-backdrop-filter: blur(14px) saturate(120%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
   cursor: pointer;
-  transition: transform .1s ease, box-shadow .18s ease;
+  transition: transform .1s ease, background .18s ease;
 }
-.theme-arrow:hover { box-shadow: 0 8px 24px rgba(217, 171, 134, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.55); }
+.theme-arrow:hover { background: rgba(255, 255, 255, 0.85); }
 .theme-arrow:active { transform: scale(.9); }
 .theme-name {
   min-width: 120px; text-align: center;
@@ -411,19 +445,17 @@ body::after {
   background: rgba(90,76,60,.06);
   display: flex; flex-direction: column; gap: 3px;
 }
-.hist-time { font-family: var(--mono); font-size: 10px; color: var(--ink-faint); }
-.hist-text { font-family: var(--mono); font-size: 12px; color: var(--ink-dim); word-break: break-word; }
-.hist-empty { font-size: 11px; color: var(--ink-faint); text-align: center; padding: 14px 0; }
+.hist-time { font-family: var(--mono); font-size: 11px; color: var(--ink-faint); }
+.hist-text { font-family: var(--mono); font-size: 13.5px; color: var(--ink-dim); word-break: break-word; }
+.hist-empty { font-size: 12px; color: var(--ink-faint); text-align: center; padding: 14px 0; }
 
-/* frosted-glass panels wearing the same bright violet→pink rim as the bubble */
+/* plain translucent-white panels — no colored outline */
 .history, .exposure-panel {
-  border: 1px solid transparent;
-  background:
-    linear-gradient(rgba(255, 253, 248, 0.84), rgba(250, 245, 237, 0.84)) padding-box,  /* translucent, readable */
-    linear-gradient(135deg, #d9ab86e6, #d295a6e1) border-box;
-  backdrop-filter: blur(18px) saturate(135%);                                                         
-  -webkit-backdrop-filter: blur(14px) saturate(130%);                                                 
-  box-shadow: 0 12px 28px rgba(70, 58, 82, 0.358), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.68);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(18px) saturate(120%);
+  -webkit-backdrop-filter: blur(18px) saturate(120%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
 }
 
 /* --- exposure panel (right) --------------------------------------------- */
@@ -458,7 +490,7 @@ body::after {
 .exposure-panel.moderate .exp-state { color: var(--moderate); }
 .exposure-panel.critical .exp-state { color: var(--critical); }
 
-.exp-why { font-size: 12px; line-height: 1.5; color: var(--ink-dim); margin-bottom: 16px; }
+.exp-why { font-size: 13.5px; line-height: 1.5; color: var(--ink-dim); margin-bottom: 16px; }
 
 /* live "how reconstructable was the latest keystroke" meter */
 .exp-meter { height: 6px; border-radius: 3px; background: rgba(80,66,90,.12); overflow: hidden; margin-bottom: 14px; }
@@ -470,7 +502,7 @@ body::after {
 .exp-meter-fill.mid { background: var(--moderate); }
 .exp-meter-fill.hi  { background: var(--critical); }
 
-.exp-hint { font-family: var(--mono); font-size: 9px; color: var(--ink-faint); }
+.exp-hint { font-family: var(--mono); font-size: 10.5px; color: var(--ink-faint); }
 
 @media (max-width: 980px) {
   .history, .exposure-panel { display: none; }
