@@ -152,14 +152,17 @@ window.App = window.App || {};
     applyEvent(evt) {
       this.lastRisk = evt.risk_score;
 
-      // build up the reconstructed phrase + worst stats for this window
-      this.buf += evt.key_top1;
-      if (evt.risk_score > this.winRisk) this.winRisk = evt.risk_score;
-      if (evt.speech_present) this.winSpeech = true;
-
       if (evt.alert) {
         this.latched = true;
         if (SEV_RANK[evt.alert_severity] > SEV_RANK[this.peak]) this.peak = evt.alert_severity;
+
+        // Build the window from alerting keystrokes only. A keystroke below the
+        // risk threshold is one the system judged *not* reconstructable, so
+        // including it would quote text as leaked that we ourselves scored as
+        // ambiguous — overstating the exposure the panel exists to report.
+        this.buf += evt.key_top1;
+        if (evt.risk_score > this.winRisk) this.winRisk = evt.risk_score;
+        if (evt.speech_present) this.winSpeech = true;
         if (SEV_RANK[evt.alert_severity] > SEV_RANK[this.winSev]) this.winSev = evt.alert_severity;
 
         // only log an alert (with the exploitable phrase) every ~10 seconds
