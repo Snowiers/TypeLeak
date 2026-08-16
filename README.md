@@ -1,12 +1,99 @@
-# Acoustic Keystroke Live Demo
+# TypeLeak
 
-Reconstructs what's being typed from the **sound** of typing. The Mac streams
+TypeLeak reconstructs what's being typed from the **sound** of typing. The Mac streams
 microphone audio to the DGX Spark, which detects + classifies each keystroke and
-shows the live transcription (with optional LLM correction) in a web page.
+shows the live transcription (with optional LLM correction) in a web page. 
 
 ```
   MAC (client.py) ──mic audio──▶ SPARK (live_server.py) ──▶ browser (http://spark:8080)
 ```
+
+---
+
+## Architecture
+
+```
++--------------------------------------------------------------------------------+
+| MAC -- client.py                                                         [Mac] |
+| sounddevice mic capture                                                        |
+| pynput ground-truth logger (--eval only; never sent to the model)              |
++--------------------------------------------------------------------------------+
+                                        |  raw PCM, TCP :9009 (length-prefixed float32 frames)
+                                        v
++--------------------------------------------------------------------------------+
+| SPARK -- audio path (live_server.py / server.py / detector.py)     [Spark GPU] |
+| rolling audio buffer -> onset detection                                        |
+|   (librosa spectral flux + scipy peak-picking)                                 |
+| onset -> per-keystroke clip -> log-mel spectrogram                             |
+| classifier: fine-tuned EfficientNetV2 (timm) -> predicted char + confidence    |
++--------------------------------------------------------------------------------+
+                                        |  predicted char echoed to Mac over TCP + fed into the Engine
+                                        v
++--------------------------------------------------------------------------------+
+| SPARK -- Engine (live_server.py)                                   [Spark GPU] |
+| owns the raw decoded text stream                                               |
+| optional LLM correction on a typing pause                                      |
+|   (llm_correct.py: NVIDIA Nemotron / Mistral-NeMo-Minitron, local GPU)         |
+| auto-commits the line to history after a longer idle pause                     |
++--------------------------------------------------------------------------------+
+                                        |  JSON events over Server-Sent-Events, HTTP :8080
+                                        v
++--------------------------------------------------------------------------------+
+| BROWSER -- frontend/ (vanilla JS, no build step)                     [browser] |
+| EventSource /events: reset | key | transcript | commit | llm_state             |
+| Mac keyboard replica (flat 2D DOM/CSS) flashes the predicted key               |
+| live typed line + session history (localStorage)                               |
+| control panel: LLM toggle -> POST /api/llm, force commit -> POST /api/commit   |
++--------------------------------------------------------------------------------+
+```
+
+**Offline training pipeline** — separate from the live path above, run ahead
+of time to produce the checkpoint `live_server.py` loads at startup:
+
+```
+--- offline training pipeline (produces the checkpoint live_server.py loads) ---
+
++--------------------------------------------------------------------------------+
+| record.py / record_ambient.py session(s)  (on machine, not in this repo)       |
+| -> dataset/raw/<session>/{audio.wav, events.json}                [Mac,offline] |
++--------------------------------------------------------------------------------+
+                                        |
+                                        v
++--------------------------------------------------------------------------------+
+| process.py (+ combine_dataset.py to merge multiple sessions)         [offline] |
+| detector.py onset detection, matched against logged keypresses                 |
+|   -> labeled per-keystroke clips: dataset/processed/*.npy + labels.csv         |
++--------------------------------------------------------------------------------+
+                                        |
+                                        v
++--------------------------------------------------------------------------------+
+| train.py / train_sweep.py                                 [Spark GPU, offline] |
+| fine-tunes EfficientNetV2 (timm) on the labeled clips                          |
+| -> dataset/runs/<timestamp>/best_model.pt                                      |
++--------------------------------------------------------------------------------+
+                                        |  auto-loaded at startup (newest checkpoint by mtime)
+                                        v
++--------------------------------------------------------------------------------+
+| live_server.py / server.py                                                     |
++--------------------------------------------------------------------------------+
+```
+
+`detector.py` is shared and unmodified between this offline path and the live
+audio path above.
+
+## Tech stack
+
+| Layer | Tech |
+|---|---|
+| Mic capture (Mac) | Python 3, `sounddevice`; `pynput` for ground-truth logging in eval mode only |
+| Audio transport | Raw TCP socket, length-prefixed float32 PCM frames — no HTTP/WebSocket overhead on the hot path |
+| Onset detection & features | `librosa` (onset envelope, log-mel spectrogram), `scipy.signal.find_peaks`, `Pillow` (spectrogram PNG export for eyeballing) |
+| Classifier | PyTorch + `timm` (fine-tuned EfficientNetV2), CUDA inference on the Spark |
+| LLM correction (optional, `--llm`) | Hugging Face `transformers`, NVIDIA Nemotron / Mistral-NeMo-Minitron, local GPU inference — no cloud API call |
+| Web/API server | Python stdlib `http.server` + Server-Sent Events — no Flask/FastAPI/Node |
+| Frontend | Vanilla HTML/CSS/JS, no build step, no three.js — a flat 2D DOM/CSS Mac-keyboard replica instead |
+| Config | YAML (`config.yaml`), the single source of truth shared by data collection, training, and live inference |
+| Target hardware | NVIDIA DGX Spark — on-device GPU inference keeps the capture → classify → correct → display round trip local, with no cloud round-trip in the loop |
 
 ---
 
@@ -60,3 +147,13 @@ Microphone permission is needed — no Input Monitoring prompt).
 macOS: grant **Microphone** permission (and **Input Monitoring** if using eval mode).
 
 ---
+## Datasets Used
+
+All data used to train the detection model was self-made, including 6,965 self-recorded keystrokes turned into spectograms. This can be found under backend/dataset/processed.
+
+## Known limitations
+
+- The model was trained using 6,965 real, self-made keystrokes. All recorded keystrokes were recorded from a single Mac's scissor-switch keyboard, making the system function on one keyboard (but multiple typists); it does not scope up to multiple keyboards.
+- This is a detection-and-disclosure system only. It does not mute, mask, or
+  otherwise modify the digital audio stream or physical sound. However, this is a deliberate scope boundary, not a missing feature.
+- Typing too fast (above ~50-55 wpm) makes it much more difficult to identify keystrokes; at this speed, sounds from the keystrokes overlap.
