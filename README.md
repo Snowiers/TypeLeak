@@ -113,7 +113,6 @@ python3 -m venv .env
 Then open the web UI:
 
 - on the Spark itself: **http://localhost:8080**
-- from another machine on the LAN: **http://<spark-ip>:8080**
 
 Useful flags:
 
@@ -177,12 +176,12 @@ the Mac.
 ---
 ## Datasets Used
 
-All data used to train the detection model was self-made, including 6,965 self-recorded keystrokes turned into spectograms. This can be found under backend/dataset/processed. 
+All data used to train the detection model was self-made, including 7k+ self-recorded keystrokes turned into spectograms. This can be found under backend/dataset/processed. 
 Besides live inference, no other data was used.
 
 ## Known limitations
 
-- The model was trained using 6,965 real, self-made keystrokes. All recorded keystrokes were recorded from a single Mac's scissor-switch keyboard, making the system function on one keyboard (but multiple typists); it does not scope up to multiple keyboards.
+- The model was trained using 7k+ real, self-made keystrokes. All recorded keystrokes were recorded from a single Mac's scissor-switch keyboard, making the system function on one keyboard (but multiple typists); it does not scope up to multiple keyboards.
 - This is a detection-and-disclosure system only. It does not mute, mask, or
   otherwise modify the digital audio stream or physical sound. However, this is a deliberate scope boundary, not a missing feature.
 - Typing too fast (above ~50-55 wpm) makes it much more difficult to identify keystrokes; at this speed, sounds from the keystrokes overlap.
