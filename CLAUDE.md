@@ -237,7 +237,7 @@ stopping partway still leaves something demoable:
    alerts with severity and reasoning. This is the actual deliverable — it directly answers
    "why does this matter" for anyone watching the demo.
 3. **3D keyboard visualization.** Stylized, not realistic — simple box geometry per key in a
-   grid, using three.js loaded as a local file. On each event, flash the predicted key with
+   grid, using three.js loaded as a local file. On each event, flash the predic`ted key with
    opacity scaled to confidence. This is demo polish, not something any judging criterion
    strictly requires. If time runs short, degrade to a flat 2D HTML/CSS key grid that does the
    same job with a fraction of the build effort — this degradation path should be assumed from

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>exposure</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <!-- faint drifting starfield + a soft ripple on each keystroke -->
+  <canvas id="stars" aria-hidden="true"></canvas>
+
+  <header class="topbar">
+    <span class="brand"><span class="brand-dot"></span>exposure</span>
+    <span id="source-pill" class="source-pill connecting">
+      <span class="source-dot"></span><span id="source-text">connecting</span>
+    </span>
+  </header>
+
+  <!-- typed-session history, quietly tucked on the left -->
+  <aside id="history" class="glass history">
+    <div class="panel-head">
+      <span>typed</span>
+      <button id="clear-logs" class="mini-btn" title="clear all logs">clear</button>
+    </div>
+    <ul id="history-list" class="history-list"></ul>
+  </aside>
+
+  <main class="stage">
+    <!-- what's being typed, live -->
+    <div class="glass typed-card">
+      <div id="typed" class="typed"></div>
+      <button id="finish" class="finish-btn">finish ↵</button>
+    </div>
+
+    <!-- the Mac keyboard -->
+    <div class="keyboard-wrap">
+      <div id="keyboard" class="keyboard" aria-label="predicted keystrokes"></div>
+    </div>
+  </main>
+
+  <!-- small square exposure overlay, bottom-right; click to see recent alerts -->
+  <div id="alert" class="glass alert-box secure" title="click for recent alerts">
+    <div class="alert-state" id="alert-state">secure</div>
+    <div class="alert-count" id="alert-count">watching</div>
+    <div id="alert-pop" class="alert-pop">
+      <ul id="alert-list" class="alert-list"></ul>
+      <div class="pop-hint">⌃⇧X to clear</div>
+    </div>
+  </div>
+
+  <script src="js/source.js"></script>
+  <script src="js/ambient.js"></script>
+  <script src="js/keyboard.js"></script>
+  <script src="js/panels.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
