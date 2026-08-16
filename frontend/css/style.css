@@ -1,0 +1,569 @@
+/* exposure — minimal, rounded, near-black. Starfield backdrop; a Mac keyboard as
+   the centerpiece; light glass surfaces. No framework, no build step. */
+
+:root {
+  /* dark text — the UI surfaces are light/cream now */
+  --ink: #33303f;
+  --ink-dim: #54506a;
+  --ink-faint: #78748c;
+
+  --glass-brd: rgba(255, 255, 255, 0.30);
+  --glass-hi: rgba(255, 255, 255, 0.36);
+
+  --key-face: rgba(255, 255, 255, 0.09);
+  --key-brd: rgba(255, 255, 255, 0.11);
+  --key-ink: #dfe1ea;
+
+  --cool: #b7a8f2;        /* lavender — every key press, shaded by confidence */
+  --glass-edge: rgba(192, 182, 246, 0.32);   /* soft lavender glass rim */
+  --secure: #3bb17c;      /* slightly lighter, still readable on light panels */
+  --moderate: #d69c33;
+  --critical: #df6579;
+
+  --font: "Ubuntu", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+
+  --r-card: 24px;
+  --r-key: 9px;
+}
+
+/* animatable hue for the RGB LED underglow */
+@property --hue { syntax: "<number>"; initial-value: 0; inherits: false; }
+@keyframes rgbcycle { from { --hue: 0; } to { --hue: 360; } }
+
+/* animatable angle for the transcription bar's rotating rainbow rim */
+@property --bub { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
+@keyframes bubrot { to { --bub: 360deg; } }
+
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+
+body {
+  font-family: var(--font);
+  color: var(--ink);
+  background: linear-gradient(160deg, #f4efe4 0%, #ece4d5 55%, #e6ddcb 100%);  /* cream / beige */
+  overflow: hidden;
+  min-height: 100vh;
+  --px: 0; --py: 0;                 /* mouse parallax, set from JS */
+  -webkit-font-smoothing: antialiased;
+}
+/* faint dotted texture — dark dots on the cream (drifts slightly with the mouse) */
+body::before {
+  content: "";
+  position: fixed; inset: -4%; z-index: 0; pointer-events: none;
+  background-image: radial-gradient(rgba(84, 70, 56, 0.045) 1.1px, transparent 1.6px);
+  background-size: 26px 26px;
+  transform: translate3d(calc(var(--px) * 18px), calc(var(--py) * 18px), 0);
+  transition: transform .3s ease-out;
+}
+/* soft pastel blobs drifting behind everything — the airy neo-glass vibe */
+body::after {
+  content: "";
+  position: fixed; inset: -12%; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(62% 54% at 50% 40%, rgba(255, 255, 255, 0.45), transparent 70%),                   
+    radial-gradient(130% 116% at 50% 42%, transparent 60%, rgba(80, 66, 90, 0.10) 100%);  
+  filter: blur(64px);
+  transform: translate3d(calc(var(--px) * -44px), calc(var(--py) * -44px), 0);
+  transition: transform .3s ease-out;
+  animation: blobDrift 26s ease-in-out infinite alternate;
+}
+@keyframes blobDrift {
+  0%   { background-position: 0 0, 0 0, 0 0, 0 0; }
+  100% { background-position: 3% -3%, -3% 2%, 2% 3%, -2% -2%; }
+}
+
+#stars { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
+
+/* --- glass primitive (shared by every panel AND the keyboard) ----------- */
+.glass {
+  background: linear-gradient(155deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--glass-brd);
+  border-radius: var(--r-card);
+  /* clear frosted glass that brightens + picks up the colored light behind it */
+  backdrop-filter: blur(22px) saturate(165%) brightness(1.08);
+  -webkit-backdrop-filter: blur(22px) saturate(165%) brightness(1.08);
+  box-shadow:
+    0 22px 54px rgba(0, 0, 0, 0.38),
+    inset 0 1px 0 var(--glass-hi),
+    inset 0 0 40px rgba(255, 255, 255, 0.05);
+}
+
+/* --- top bar ------------------------------------------------------------ */
+.topbar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 5;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 24px;
+}
+.brand {
+  display: flex; align-items: center; gap: 9px;
+  font-size: 20px; font-weight: 500; letter-spacing: .3px; color: var(--ink-dim);
+}
+.brand-dot {
+  width: 7px; height: 7px; border-radius: 50%; background: var(--secure);
+  box-shadow: 0 0 10px var(--secure);
+}
+.brand-mode { color: var(--ink-faint); font-size: 12px; margin-left: 4px; }
+.source-pill {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 11px; color: var(--ink-faint);
+  padding: 5px 11px; border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.07); background: rgba(255, 255, 255, 0.03);
+}
+.source-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ink-faint); }
+.source-pill.live { color: var(--secure); } .source-pill.live .source-dot { background: var(--secure); }
+.source-pill.demo { color: var(--ink-dim); } .source-pill.demo .source-dot { background: var(--ink-dim); }
+.source-pill.connecting .source-dot { animation: blink 1s steps(1) infinite; }
+@keyframes blink { 0%, 50% { opacity: 1; } 50.01%, 100% { opacity: .25; } }
+
+/* --- stage / centerpiece ------------------------------------------------ */
+.stage {
+  position: relative; z-index: 2;
+  min-height: 100vh;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 30px; padding: 40px 24px;
+}
+
+/* label + bar grouped; the pair drifts together with the mouse */
+.typed-wrap {
+  width: min(880px, 92vw);
+  display: flex; flex-direction: column; gap: 9px;
+  transform: translate3d(calc(var(--px) * 13px), calc(var(--py) * 9px), 0);
+  transition: transform .25s ease-out;
+}
+.listening {
+  display: flex; align-items: center; gap: 8px;
+  padding-left: 10px;
+  font-size: 13px; letter-spacing: .5px; color: var(--ink-faint);
+}
+@keyframes pulseDot { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(.78); } }
+.listening-ellipsis::after { content: "…"; animation: ellip 1.6s steps(1) infinite; }
+@keyframes ellip { 0% { content: ""; } 33% { content: "·"; } 66% { content: "··"; } 100% { content: "···"; } }
+
+/* live typed text — a soft, very round translucent-white bubble (no colored rim) */
+.typed-card {
+  width: 100%;
+  padding: 18px 24px;
+  display: flex; align-items: flex-end; gap: 16px;
+  border-radius: 40px;                 /* much rounder */
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(18px) saturate(120%);
+  -webkit-backdrop-filter: blur(18px) saturate(120%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+.typed {
+  flex: 1; min-width: 0;
+  font-family: var(--mono); font-size: 19px; line-height: 1.5;
+  color: var(--ink);
+  max-height: 84px; overflow-y: auto;
+  white-space: pre-wrap; word-break: break-word;
+}
+.typed:empty::before { content: "listening…"; color: var(--ink-faint); }
+.typed::-webkit-scrollbar { width: 5px; }
+.typed::-webkit-scrollbar-thumb { background: rgba(80,66,90,.25); border-radius: 3px; }
+.finish-btn {
+  flex: 0 0 auto;
+  font-family: var(--font); font-size: 13px; font-weight: 600; color: #fff;
+  padding: 9px 18px; border-radius: 999px;
+  border: none;
+  background: #d68fa6;                        /* solid dusty rose — matches the warm palette */
+  box-shadow: 0 5px 14px rgba(200, 130, 160, 0.32);
+  cursor: pointer; transition: filter .18s ease, transform .1s ease;
+}
+.finish-btn:hover { filter: brightness(1.06); }
+.finish-btn:active { transform: scale(.96); }
+
+/* --- keyboard ----------------------------------------------------------- */
+.keyboard-wrap { perspective: 1500px; display: flex; justify-content: center; }
+.keyboard {
+  width: min(880px, 92vw);
+  display: flex; flex-direction: column; gap: 17px;
+  padding: 16px 16px 24px; border-radius: 26px;
+  /* same glass material as the panels — just larger and tilted */                                    
+  background: linear-gradient(155deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04));          
+  border: 1px solid var(--glass-brd);                                                                 
+  backdrop-filter: blur(22px) saturate(165%) brightness(1.08);                                        
+  -webkit-backdrop-filter: blur(22px) saturate(165%) brightness(1.08); 
+  box-shadow:
+    0 44px 90px rgba(0, 0, 0, 0.45),                                                                  
+    inset 0 1px 0 var(--glass-hi),                                                                    
+    inset 0 0 46px rgba(255, 255, 255, 0.06),                                                         
+    inset 0 -18px 40px rgba(0, 0, 0, 0.12);
+  transform: rotateX(9deg);
+  animation: float 7s ease-in-out infinite;
+  transform-style: preserve-3d;
+}
+@keyframes float {
+  0%, 100% { transform: rotateX(10deg) translateY(0); }
+  50%      { transform: rotateX(10deg) translateY(-7px); }
+}
+
+/* dress the tray as a solid mechanical case (overrides the glass look above) */
+.keyboard {
+  /* ---- default theme: Aurora RGB — CREAM caps with rainbow LED glowing around them
+     (matches the cream screen but keeps the RGB identity) ---- */
+  --cap-top: #f2efe8;   --cap-wall: #d4cec2;         /* clean off-white, neutral wall (not muddy tan) */
+  --cap-top-sub: #f2efe8; --cap-wall-sub: #d4cec2;
+  --cap-top-mod: #f2efe8;  --cap-wall-mod: #d4cec2;
+  --cap-top-acc: #f2efe8;  --cap-wall-acc: #d4cec2;
+  --cap-top-acc3: #f2efe8; --cap-wall-acc3: #d4cec2;
+  --cap-legend: #4c4842;
+  --rgb-a: 0.5;                                       /* RGB glow strength */
+  /* --glow intentionally unset here → keys fall back to the animated rainbow */
+  --case: #cbc3b3;  /* solid neutral tray */
+  --case-lip: #a49a86;
+  --case-shade: rgba(90, 78, 50, 0.2);
+  --case-hi: rgba(255, 255, 255, 0.5);
+
+  background: var(--case);
+  border: none;
+  border-top: 1px solid var(--case-hi);
+  border-radius: 16px;
+  padding: 20px 18px 22px;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow:
+    inset 0 2px 0 var(--case-hi),                    /* top edge highlight only */
+    0 14px 0 var(--case-lip),                        /* front lip = the board's thickness */
+    0 26px 50px rgba(60, 44, 40, 0.30);              /* soft ground shadow */
+}
+/* ---- theme: Cloud (light lavender caps, no RGB) ---- */
+.keyboard[data-theme="cloud"] {
+  --cap-top: #e8e6e0;   --cap-wall: #c2bfb5;          /* soft off-white (not yellow, not bright) */
+  --cap-top-sub: #e1dfd8; --cap-wall-sub: #bbb8ae;
+  --cap-top-mod: #a9cbe8;  --cap-wall-mod: #7ba4c9;   /* accent 1 — light blue */
+  --cap-top-acc: #cce5f4;  --cap-wall-acc: #9ec3db;   /* accent 2 — lighter blue (Esc/arrows) */
+  --cap-top-acc3: #cbbdee; --cap-wall-acc3: #a294cf;  /* accent 3 — soft lavender (WASD) */
+  --cap-legend: #4a4842;
+  --rgb-a: 0;
+  --glow: transparent;
+  --case: #c3c0b8;  /* solid light grey tray */
+  --case-lip: #9f9c93;
+  --case-shade: rgba(66, 66, 78, 0.16);
+  --case-hi: rgba(255, 255, 255, 0.5);
+}
+/* ---- theme: Lilypad (soft greens on a LIGHT sage frame, no RGB) ---- */
+.keyboard[data-theme="lily"] {
+  --cap-top: #e2ecd4;   --cap-wall: #bccaa4;          /* light leaf green */
+  --cap-top-sub: #dbe6cb; --cap-wall-sub: #b3c29b;
+  --cap-top-mod: #c6d6ac;  --cap-wall-mod: #a0b482;   /* accent 1 — gentle mid green */
+  --cap-top-acc: #8fb46f;  --cap-wall-acc: #6b9150;   /* accent 2 — deeper green (Esc/arrows) */
+  --cap-top-acc3: #eec2cd; --cap-wall-acc3: #cf9aa8;  /* accent 3 — soft blush (WASD) */
+  --cap-legend: #46543a;
+  --rgb-a: 0;
+  --glow: transparent;
+  --case: #cad4b4;  /* solid light sage frame */
+  --case-lip: #a8b58c;
+  --case-shade: rgba(90, 100, 66, 0.16);
+  --case-hi: rgba(255, 255, 255, 0.5);
+}
+/* ---- theme: Blush (peach-pink base, rosy accents forming a heart, no RGB) ---- */
+.keyboard[data-theme="blush"] {
+  --cap-top: #f7d7d1;   --cap-wall: #e0b3ac;          /* soothing light peach-pink */
+  --cap-top-sub: #f7d7d1; --cap-wall-sub: #e0b3ac;
+  --cap-top-mod: #f7d7d1;  --cap-wall-mod: #e0b3ac;   /* specials share the base */
+  --cap-top-acc: #f7d7d1;  --cap-wall-acc: #e0b3ac;
+  --cap-top-acc3: #f7d7d1; --cap-wall-acc3: #e0b3ac;
+  --heart-top: #e08fa2;   --heart-wall: #bd6c80;      /* darker rosy blush for the heart */
+  --cap-legend: #7c4a53;
+  --rgb-a: 0;
+  --glow: transparent;
+  --case: #edcaca;  /* solid light rose frame */
+  --case-lip: #cfa4a4;
+  --case-shade: rgba(150, 90, 100, 0.14);
+  --case-hi: rgba(255, 255, 255, 0.55);
+}
+/* the heart: these keys light up in the rosy accent, forming a heart shape */
+.keyboard[data-theme="blush"] .key[data-k="6"],
+.keyboard[data-theme="blush"] .key[data-k="7"],
+.keyboard[data-theme="blush"] .key[data-k="9"],
+.keyboard[data-theme="blush"] .key[data-k="0"],
+.keyboard[data-theme="blush"] .key[data-k="t"],
+.keyboard[data-theme="blush"] .key[data-k="y"],
+.keyboard[data-theme="blush"] .key[data-k="u"],
+.keyboard[data-theme="blush"] .key[data-k="i"],
+.keyboard[data-theme="blush"] .key[data-k="o"],
+.keyboard[data-theme="blush"] .key[data-k="p"],
+.keyboard[data-theme="blush"] .key[data-k="h"],
+.keyboard[data-theme="blush"] .key[data-k="j"],
+.keyboard[data-theme="blush"] .key[data-k="k"],
+.keyboard[data-theme="blush"] .key[data-k="n"],
+.keyboard[data-theme="blush"] .key[data-k="m"] {
+  --top: var(--heart-top); --wall: var(--heart-wall);
+}
+
+/* ---- theme: NVIDIA (black case + NVIDIA-green legends and accent keys) ---- */
+.keyboard[data-theme="nvidia"] {
+  --cap-top: #1f1f22;   --cap-wall: #101012;         /* black base */
+  --cap-top-sub: #1f1f22; --cap-wall-sub: #101012;
+  --cap-top-mod: #1f1f22;  --cap-wall-mod: #101012;
+  --cap-top-acc: #76b900;  --cap-wall-acc: #588f00;  /* NVIDIA green (Esc/arrows) */
+  --cap-top-acc3: #76b900; --cap-wall-acc3: #588f00; /* NVIDIA green (WASD) */
+  --cap-legend: #76b900;                             /* green legends on the black caps */
+  --rgb-a: 0;
+  --glow: rgba(118, 185, 0, 0.42);                   /* fixed green LED glow */
+  --case: #141418;  /* solid black case */
+  --case-lip: #060607;
+  --case-shade: rgba(0, 0, 0, 0.5);
+  --case-hi: rgba(118, 185, 0, 0.14);                /* faint green top rim */
+}
+/* the green accent keys get a dark legend so it stays readable on green */
+.keyboard[data-theme="nvidia"] .key.wide-s,
+.keyboard[data-theme="nvidia"] .key.arrow,
+.keyboard[data-theme="nvidia"] .key[data-k="w"],
+.keyboard[data-theme="nvidia"] .key[data-k="a"],
+.keyboard[data-theme="nvidia"] .key[data-k="s"],
+.keyboard[data-theme="nvidia"] .key[data-k="d"] {
+  color: #10240a;
+}
+
+.kb-row { display: flex; gap: 5px; align-items: stretch; }
+
+.key {
+  position: relative;
+  flex: 1;
+  display: flex; align-items: center; justify-content: center;
+  height: 46px; min-width: 0;
+  font-family: var(--font); font-size: 14px; font-weight: 600;
+  color: var(--cap-legend);               /* legend color comes from the theme */
+  border-radius: 6px;                     /* square chunky keycap */
+  /* opaque keycap: TOP + darker FRONT wall + an RGB LED glowing from underneath
+     (only visible when the theme's --rgb-a is > 0). All colors are theme vars. */
+  --top: var(--cap-top);
+  --wall: var(--cap-wall);
+  --hue: 0;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--top) 82%, white), var(--top));
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.18),               /* top edge */
+    0 13px 0 var(--wall),                                /* FRONT wall */
+    0 11px 9px rgba(0,0,0,0.26),                          /* soft ground shadow */
+    0 7px 20px 1px var(--glow, hsla(var(--hue), 92%, 60%, 0.5)); /* RGB underglow */
+  animation: rgbcycle 7s linear infinite;
+  transition: transform .09s cubic-bezier(.2,.9,.2,1),
+              filter .12s ease, background .3s ease, color .3s ease;
+  --sev-c: var(--cool);
+}
+/* colorway — specials, mods, and accent keys draw from the theme's shades */
+.key:has(.sub) { --top: var(--cap-top-sub); --wall: var(--cap-wall-sub); }
+/* accent 1 — modifiers */
+.key.mod, .key.wide, .key.fkey, .key.space {
+  --top: var(--cap-top-mod); --wall: var(--cap-wall-mod);
+}
+/* accent 2 — Esc + arrows */
+.key.wide-s, .key.arrow {
+  --top: var(--cap-top-acc); --wall: var(--cap-wall-acc);
+}
+/* accent 3 — WASD */
+.key[data-k="w"], .key[data-k="a"], .key[data-k="s"], .key[data-k="d"] {
+  --top: var(--cap-top-acc3); --wall: var(--cap-wall-acc3);
+}
+
+/* smaller keys get proportionally shorter walls so the chunk stays balanced */
+.row-fn .key {
+  height: 30px; font-size: 10px;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.16),
+    0 7px 0 var(--wall),
+    0 8px 7px rgba(0,0,0,0.24),
+    0 5px 15px 1px var(--glow, hsla(var(--hue), 92%, 60%, 0.5));
+}
+
+/* dual legends (number row, punctuation) */
+.key .sub { font-size: 9px; color: color-mix(in srgb, var(--cap-legend) 62%, transparent); line-height: 1; margin-bottom: 2px; }
+.key .main { font-size: 13px; line-height: 1; }
+.key:has(.sub) { flex-direction: column; justify-content: center; }
+
+/* wide / labeled keys */
+.key.wide, .key.wide-s, .key.mod { font-size: 11px; }
+.key.mod { font-size: 15px; }
+.key.wide.l { justify-content: flex-start; padding-left: 12px; }
+.key.wide.r { justify-content: flex-end; padding-right: 12px; }
+
+/* arrow cluster */
+.arrows { display: flex; gap: 5px; align-items: stretch; }
+.arrows .arrow {
+  flex: 1; font-size: 10px;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.16),
+    0 7px 0 var(--wall),
+    0 8px 7px rgba(0,0,0,0.24),
+    0 5px 15px 1px var(--glow, hsla(var(--hue), 92%, 60%, 0.5));
+}
+.arrow-col { flex: 1; display: flex; flex-direction: column; gap: 9px; }
+.arrow-col .half {
+  height: 20px; font-size: 8px;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.16),
+    0 4px 0 var(--wall),
+    0 5px 5px rgba(0,0,0,0.24),
+    0 4px 12px 1px var(--glow, hsla(var(--hue), 92%, 60%, 0.5));
+}
+
+/* pressed: the cap drops onto its wall (crisp), tints and glows lavender.
+   confidence (--i) sets the glow; severity lives in the exposure panel, not here. */
+/* pressed: the cap just travels down and lifts in brightness — no glow flare.
+   (the RGB underglow, if the theme has one, simply carries on underneath.) */
+.key.hit {
+  transform: translateY(8px);
+  filter: brightness(1.22);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.22),
+    0 5px 0 var(--wall),                    /* front wall shortens as it presses */
+    0 6px 6px rgba(0,0,0,0.24),
+    0 4px 14px 1px var(--glow, hsla(var(--hue), 92%, 60%, 0.5));
+}
+
+/* Cute stickers: draw your own transparent PNG/SVG, drop the files into
+   frontend/stickers/, and map them to keys below. Nothing shows until the file
+   exists, so this is safe to leave in place. */
+.key[data-k="q"]::after,
+.key[data-k="g"]::after,
+.key[data-k="p"]::after,
+.key.wide-s::after,
+.key.space::after {
+  content: ""; position: absolute; top: 2px; right: 3px;
+  width: 16px; height: 16px;
+  background-size: contain; background-repeat: no-repeat; background-position: center;
+  transform: rotate(-8deg); pointer-events: none; z-index: 3;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.45));
+}
+.key[data-k="q"]::after { background-image: url("../stickers/sticker1.png"); }
+.key[data-k="g"]::after { background-image: url("../stickers/sticker2.png"); }
+.key[data-k="p"]::after { background-image: url("../stickers/sticker3.png"); }
+.key.wide-s::after      { background-image: url("../stickers/sticker4.png"); }  /* esc */
+.key.space::after       { background-image: url("../stickers/sticker5.png"); right: 16px; width: 20px; height: 20px; }
+
+/* --- theme picker (glass arrows) ---------------------------------------- */
+.theme-picker {
+  display: flex; align-items: center; justify-content: center; gap: 16px;
+  margin-top: 4px;
+}
+.theme-arrow {
+  width: 42px; height: 42px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; line-height: 1; color: var(--ink);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(14px) saturate(120%);
+  -webkit-backdrop-filter: blur(14px) saturate(120%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  transition: transform .1s ease, background .18s ease;
+}
+.theme-arrow:hover { background: rgba(255, 255, 255, 0.85); }
+.theme-arrow:active { transform: scale(.9); }
+.theme-name {
+  min-width: 120px; text-align: center;
+  font-size: 12px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--ink-dim);
+}
+
+/* --- history (left) ----------------------------------------------------- */
+.history {
+  position: fixed; left: 22px; top: 50%; z-index: 4;
+  transform: translateY(-50%) translate3d(calc(var(--px) * 20px), calc(var(--py) * 20px), 0);
+  transition: transform .25s ease-out;
+  width: 208px; max-height: 62vh;
+  padding: 15px 16px; display: flex; flex-direction: column;
+  border-radius: 22px;
+}
+.panel-head {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 16px; font-weight: 600; letter-spacing: .2px;
+  color: var(--ink-dim); margin-bottom: 11px;
+}
+.mini-btn {
+  font-family: var(--font); font-size: 13px; color: var(--ink-faint);
+  background: none; border: 1px solid rgba(80,66,90,0.2); border-radius: 999px;
+  padding: 3px 9px; cursor: pointer; transition: color .15s, border-color .15s;
+}
+.mini-btn:hover { color: var(--ink); border-color: rgba(80,66,90,0.4); }
+.history-list { list-style: none; margin: 0; padding: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+.history-list::-webkit-scrollbar { width: 5px; }
+.history-list::-webkit-scrollbar-thumb { background: rgba(80,66,90,.22); border-radius: 3px; }
+.hist-item {
+  padding: 8px 11px; border-radius: 8px;
+  background: rgba(90,76,60,.06);
+  display: flex; flex-direction: column; gap: 3px;
+}
+.hist-time { font-family: var(--mono); font-size: 12px; color: var(--ink-faint); }
+.hist-text { font-family: var(--mono); font-size: 14px; color: var(--ink-dim); word-break: break-word; }
+.hist-empty { font-size: 13px; color: var(--ink-faint); text-align: center; padding: 14px 0; }
+
+/* plain translucent-white panels — no colored outline */
+.history, .control-panel {
+  background: rgba(255, 255, 255, 0.68);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(18px) saturate(120%);
+  -webkit-backdrop-filter: blur(18px) saturate(120%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+}
+
+/* --- LLM correction control panel (right) ------------------------------- */
+.control-panel {
+  position: fixed; right: 22px; top: 50%; z-index: 4;
+  transform: translateY(-50%) translate3d(calc(var(--px) * 20px), calc(var(--py) * 20px), 0);
+  width: 218px;
+  padding: 18px 18px; display: flex; flex-direction: column;
+  border-radius: 22px;
+  transition: box-shadow .5s ease, transform .25s ease-out;
+  --accent: var(--cool);
+}
+.control-panel.on  { --accent: var(--secure); }
+.control-panel.off { --accent: var(--ink-faint); }
+
+.ctrl-head {
+  font-size: 12.5px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase;
+  color: var(--ink-faint); margin-bottom: 16px;
+  padding-bottom: 10px; border-bottom: 1px solid rgba(80,66,90,0.10);
+}
+.ctrl-row {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 14px;
+}
+.ctrl-label { font-size: 14px; font-weight: 600; color: var(--ink-dim); }
+
+/* the slider switch */
+.switch { position: relative; display: inline-block; width: 46px; height: 26px; flex: 0 0 auto; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.switch .slider {
+  position: absolute; inset: 0; cursor: pointer; border-radius: 999px;
+  background: rgba(80,66,90,0.22);
+  transition: background .22s ease;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.12);
+}
+.switch .slider::before {
+  content: ""; position: absolute; height: 20px; width: 20px; left: 3px; top: 3px;
+  border-radius: 50%; background: #fff;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.28);
+  transition: transform .22s cubic-bezier(.2,.9,.2,1);
+}
+.switch input:checked + .slider { background: var(--secure); }
+.switch input:checked + .slider::before { transform: translateX(20px); }
+.switch input:disabled + .slider { opacity: .5; cursor: not-allowed; }
+
+.ctrl-state {
+  font-size: 22px; font-weight: 600; letter-spacing: .3px; text-transform: lowercase;
+  color: var(--accent); margin-bottom: 7px;
+}
+.ctrl-status { font-size: 13px; line-height: 1.5; color: var(--ink-dim); margin-bottom: 6px; }
+.ctrl-note { font-size: 12px; line-height: 1.45; color: var(--moderate); min-height: 0; }
+.ctrl-note:empty { display: none; }
+
+.ctrl-sep { height: 1px; background: rgba(80,66,90,0.10); margin: 16px 0 12px; }
+
+.ctrl-facts { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.ctrl-facts li { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.ctrl-facts li span:first-child {
+  font-size: 11px; letter-spacing: .6px; text-transform: uppercase; color: var(--ink-faint);
+}
+.ctrl-facts li span:last-child {
+  font-family: var(--mono); font-size: 12.5px; color: var(--ink-dim); text-align: right; word-break: break-word;
+}
+.ctrl-hint { font-size: 11px; line-height: 1.5; color: var(--ink-faint); }
+
+@media (max-width: 980px) {
+  .history, .control-panel { display: none; }
+  .typed-wrap, .keyboard { width: 94vw; }
+}

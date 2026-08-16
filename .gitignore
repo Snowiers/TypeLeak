@@ -1,0 +1,13 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.swp
+*.swo
+.DS_Store
+
+backend/.env/
+.env/
+
+backend/last_session.json
+
+# backend/dataset/processed/
