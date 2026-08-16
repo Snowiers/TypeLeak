@@ -505,7 +505,7 @@ body::after {
 .exposure-panel {
   position: fixed; right: 22px; top: 50%; z-index: 4;
   transform: translateY(-50%) translate3d(calc(var(--px) * 20px), calc(var(--py) * 20px), 0);
-  width: 210px;
+  width: 214px; max-height: 78vh;
   padding: 18px 16px; display: flex; flex-direction: column;
   border-radius: 22px;
   transition: box-shadow .5s ease, transform .25s ease-out;
@@ -544,6 +544,39 @@ body::after {
 }
 .exp-meter-fill.mid { background: var(--moderate); }
 .exp-meter-fill.hi  { background: var(--critical); }
+
+/* running log of recent alerts */
+.exp-loghead {
+  font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--ink-faint); margin-bottom: 8px;
+}
+.exp-log {
+  list-style: none; margin: 0 0 12px; padding: 0;
+  flex: 1; min-height: 40px; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 7px;
+}
+.exp-log::-webkit-scrollbar { width: 5px; }
+.exp-log::-webkit-scrollbar-thumb { background: rgba(80,66,90,.22); border-radius: 3px; }
+.al-item {
+  padding: 7px 9px; border-radius: 9px;
+  background: rgba(90,76,60,.05);
+  border-left: 3px solid var(--ink-faint);
+}
+.al-item.moderate { border-left-color: var(--moderate); }
+.al-item.critical { border-left-color: var(--critical); }
+.al-head { display: flex; align-items: baseline; justify-content: space-between; }
+.al-sev {
+  font-size: 11px; font-weight: 600; text-transform: lowercase; color: var(--ink-dim);
+}
+.al-item.moderate .al-sev { color: var(--moderate); }
+.al-item.critical .al-sev { color: var(--critical); }
+.al-time { font-family: var(--mono); font-size: 10px; color: var(--ink-faint); }
+.al-phrase {
+  font-family: var(--mono); font-size: 12px; color: var(--ink);
+  margin-top: 3px; line-height: 1.35; word-break: break-word;
+}
+.al-meta { font-family: var(--mono); font-size: 10.5px; color: var(--ink-faint); margin-top: 3px; }
+.al-empty { font-size: 11.5px; color: var(--ink-faint); text-align: center; padding: 12px 0; }
 
 .exp-hint { font-family: var(--mono); font-size: 10.5px; color: var(--ink-faint); }
 
