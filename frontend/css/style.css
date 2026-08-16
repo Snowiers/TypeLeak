@@ -3,9 +3,9 @@
 
 :root {
   /* dark text — the UI surfaces are light/cream now */
-  --ink: #3b3746;
-  --ink-dim: #6b6676;
-  --ink-faint: #9a95a4;
+  --ink: #33303f;
+  --ink-dim: #54506a;
+  --ink-faint: #78748c;
 
   --glass-brd: rgba(255, 255, 255, 0.30);
   --glass-hi: rgba(255, 255, 255, 0.36);
@@ -53,7 +53,7 @@ body::before {
   position: fixed; inset: -4%; z-index: 0; pointer-events: none;
   background-image: radial-gradient(rgba(90, 76, 60, 0.05) 1px, transparent 1.4px);
   background-size: 28px 28px;
-  transform: translate3d(calc(var(--px) * 10px), calc(var(--py) * 10px), 0);
+  transform: translate3d(calc(var(--px) * 18px), calc(var(--py) * 18px), 0);
   transition: transform .3s ease-out;
 }
 /* soft light bloom + edge shading (drifts opposite the dots → depth) */
@@ -63,7 +63,7 @@ body::after {
   background:
     radial-gradient(62% 54% at 50% 40%, rgba(255, 255, 255, 0.45), transparent 70%),
     radial-gradient(130% 116% at 50% 42%, transparent 60%, rgba(80, 66, 90, 0.10) 100%);
-  transform: translate3d(calc(var(--px) * -22px), calc(var(--py) * -22px), 0);
+  transform: translate3d(calc(var(--px) * -44px), calc(var(--py) * -44px), 0);
   transition: transform .3s ease-out;
 }
 
@@ -125,7 +125,7 @@ body::after {
   display: flex; align-items: flex-end; gap: 16px;
   border-radius: 28px;                 /* rounder = bubble */
   border: 2px solid transparent;
-  transform: translate3d(calc(var(--px) * 6px), calc(var(--py) * 4px), 0);
+  transform: translate3d(calc(var(--px) * 13px), calc(var(--py) * 9px), 0);
   transition: transform .25s ease-out;
   background:
     linear-gradient(rgba(255, 253, 248, 0.92), rgba(250, 246, 239, 0.92)) padding-box,
@@ -386,7 +386,7 @@ body::after {
 /* --- history (left) ----------------------------------------------------- */
 .history {
   position: fixed; left: 22px; top: 50%; z-index: 4;
-  transform: translateY(-50%) translate3d(calc(var(--px) * 10px), calc(var(--py) * 10px), 0);
+  transform: translateY(-50%) translate3d(calc(var(--px) * 20px), calc(var(--py) * 20px), 0);
   transition: transform .25s ease-out;
   width: 208px; max-height: 62vh;
   padding: 15px 16px; display: flex; flex-direction: column;
@@ -419,9 +419,9 @@ body::after {
 .history, .exposure-panel {
   border: 1px solid transparent;
   background:
-    linear-gradient(rgba(255, 253, 248, 0.9), rgba(250, 245, 237, 0.9)) padding-box,  /* light, filled */
-    linear-gradient(135deg, #d9ab86e6, #d295a6e1) border-box;   
-  backdrop-filter: blur(14px) saturate(130%);                                                         
+    linear-gradient(rgba(255, 253, 248, 0.84), rgba(250, 245, 237, 0.84)) padding-box,  /* translucent, readable */
+    linear-gradient(135deg, #d9ab86e6, #d295a6e1) border-box;
+  backdrop-filter: blur(18px) saturate(135%);                                                         
   -webkit-backdrop-filter: blur(14px) saturate(130%);                                                 
   box-shadow: 0 12px 28px rgba(70, 58, 82, 0.358), inset 0 1px 0 rgba(255, 255, 255, 0.7);
 }
@@ -429,7 +429,7 @@ body::after {
 /* --- exposure panel (right) --------------------------------------------- */
 .exposure-panel {
   position: fixed; right: 22px; top: 50%; z-index: 4;
-  transform: translateY(-50%) translate3d(calc(var(--px) * 10px), calc(var(--py) * 10px), 0);
+  transform: translateY(-50%) translate3d(calc(var(--px) * 20px), calc(var(--py) * 20px), 0);
   width: 210px;
   padding: 18px 16px; display: flex; flex-direction: column;
   border-radius: 22px;

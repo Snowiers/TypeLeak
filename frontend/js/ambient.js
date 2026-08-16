@@ -86,8 +86,8 @@ window.App = window.App || {};
       const lines = 3;
       for (let i = 0; i < lines; i++) {
         const hue = this._hue(i);
-        const off = (i - 1) * 11;
-        const amp = (10 + i * 5) + this.energy * (36 + i * 20);
+        const off = (i - 1) * 13;
+        const amp = (18 + i * 8) + this.energy * (48 + i * 26);
         const freq = 0.007 + i * 0.0018;
         const speed = this.t * (1.05 + i * 0.28);
         ctx.beginPath();
@@ -98,11 +98,11 @@ window.App = window.App || {};
             + Math.sin(x * freq * 2.1 - speed * 1.3) * amp * 0.3 * env;
           if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
         }
-        const alpha = 0.13 + this.energy * 0.16;
-        ctx.strokeStyle = `hsla(${hue}, 85%, 72%, ${alpha})`;
-        ctx.lineWidth = 1.6;
-        ctx.shadowColor = `hsla(${hue}, 90%, 66%, 0.55)`;
-        ctx.shadowBlur = 10;
+        const alpha = 0.3 + this.energy * 0.28;
+        ctx.strokeStyle = `hsla(${hue}, 40%, 65%, ${alpha})`;   /* deeper, so it reads on cream */
+        ctx.lineWidth = 2.2;
+        ctx.shadowColor = `hsla(${hue}, 80%, 52%, 0.4)`;
+        ctx.shadowBlur = 9;
         ctx.stroke();
         ctx.shadowBlur = 0;
       }
@@ -117,8 +117,8 @@ window.App = window.App || {};
         if (p.life <= 0) { this.ripples.splice(i, 1); continue; }
         ctx.beginPath();
         ctx.arc(cx, cy, p.r, 0, Math.PI * 2);
-        ctx.strokeStyle = `hsla(${rHue}, 85%, 70%, ${p.life * 0.06})`;
-        ctx.lineWidth = 1;
+        ctx.strokeStyle = `hsla(${rHue}, 72%, 55%, ${p.life * 0.12})`;
+        ctx.lineWidth = 1.4;
         ctx.stroke();
       }
 
