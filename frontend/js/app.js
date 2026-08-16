@@ -17,6 +17,7 @@
   const sourcePill = document.getElementById("source-pill");
   const sourceText = document.getElementById("source-text");
   function setStatus({ mode }) {
+    if (!sourcePill || !sourceText) return;   // source pill removed from the top bar
     sourcePill.className = "source-pill " + mode;
     sourceText.textContent = { connecting: "connecting", live: "live", offline: "demo" }[mode] || mode;
   }
@@ -40,7 +41,7 @@
   const THEMES = [
     { id: "rgb", name: "Aurora RGB" },
     { id: "cloud", name: "Cloud" },
-    { id: "sage", name: "Sage" },
+    { id: "lily", name: "Lilypad" },
   ];
   const kb = document.getElementById("keyboard");
   const themeLabel = document.getElementById("theme-name");
@@ -53,6 +54,7 @@
   function applyTheme() {
     const t = THEMES[themeIdx];
     kb.dataset.theme = t.id;
+    document.body.dataset.kbtheme = t.id;   // background glow follows the keyboard
     themeLabel.textContent = t.name;
     try { localStorage.setItem("kb_theme", t.id); } catch (e) {}
   }
@@ -81,6 +83,14 @@
   }
   document.getElementById("theme-prev").addEventListener("click", () => switchTheme(-1));
   document.getElementById("theme-next").addEventListener("click", () => switchTheme(1));
+
+  // Mouse parallax — feed pointer position to CSS (background, panels, bar drift).
+  window.addEventListener("pointermove", (e) => {
+    const x = (e.clientX / window.innerWidth - 0.5);
+    const y = (e.clientY / window.innerHeight - 0.5);
+    document.body.style.setProperty("--px", x.toFixed(3));
+    document.body.style.setProperty("--py", y.toFixed(3));
+  });
 
   // Acknowledge / clear the latched alarm. Window-focus only.
   window.addEventListener("keydown", (e) => {

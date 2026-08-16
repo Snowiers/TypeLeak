@@ -4,26 +4,23 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>exposure</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
-  <!-- faint drifting starfield + a soft ripple on each keystroke -->
+  <!-- reactive sound-wave field behind the keyboard -->
   <canvas id="stars" aria-hidden="true"></canvas>
 
   <header class="topbar">
     <span class="brand" title="Acoustic Exposure Monitor — reconstructs typing from microphone sound to show how exposed it is">
-      <span class="brand-dot"></span>exposure<span class="brand-mode">· attack</span>
-    </span>
-    <span id="source-pill" class="source-pill connecting"
-          title="Where events come from: 'live' = the real backend over websocket, 'demo' = the in-browser simulator">
-      <span class="source-dot"></span><span id="source-text">connecting</span>
+      <span class="brand-dot"></span>exposure
     </span>
   </header>
 
   <!-- typed-session history, quietly tucked on the left -->
   <aside id="history" class="glass history">
     <div class="panel-head">
-      <span>✎ typed</span>
+      <span>history</span>
       <button id="clear-logs" class="mini-btn" title="clear all logs">clear</button>
     </div>
     <ul id="history-list" class="history-list"></ul>
@@ -51,7 +48,6 @@
 
   <!-- exposure readout: a quiet glass panel on the right saying why it's exposed -->
   <aside id="exposure" class="glass exposure-panel secure">
-    <div class="exp-head"><span>◈ exposure</span><span class="exp-dot"></span></div>
     <div class="exp-state" id="exp-state">secure</div>
     <div class="exp-why" id="exp-why">typing sound is too ambiguous to reconstruct</div>
     <div class="exp-meter"><div class="exp-meter-fill" id="exp-meter"></div></div>
