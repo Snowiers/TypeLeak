@@ -137,8 +137,22 @@ Prediction(
 )
 ```
 
-Two ready-made adapters in `classifier.py`, both already tested. Pick whichever fits
-the shape of your code; nothing downstream changes either way.
+**If you are the `pipeline/` code, this is already wired** — run
+`python pipeline/serve_frontend.py --checkpoint <best_model.pt>` on the machine that
+has the model. It starts the websocket server, translates every pipeline event
+through `bridge.py`, and serves the dashboard. Add `--mic` for local capture instead
+of network audio, `--record take.jsonl` to capture a replayable fixture.
+
+`bridge.py` filters what reaches the dashboard: `junk`, predictions below the
+pipeline's own confidence threshold, and anything whose best guess is not in a-z or
+space. An event whose argmax is a digit or `junk` is dropped whole rather than
+demoted to the runner-up letter, so the transcript never shows a character the model
+did not predict. Risk is then scored over the reportable keys only — which means the
+alert thresholds must be calibrated against output that came *through the bridge*,
+not against raw 37-class model output.
+
+For any other producer, two ready-made adapters in `classifier.py`, both already
+tested. Pick whichever fits the shape of your code; nothing downstream changes.
 
 **You push** (best fit if you own a running capture loop):
 
@@ -181,6 +195,7 @@ by however long inference took, which is exactly the latency the demo is about.
 | `source.py` | `EventSource` interface plus `FakeSource` |
 | `replay.py` | Deterministic playback from a JSONL file |
 | `recorder.py` | Writes a live session to a replayable JSONL file |
+| `bridge.py` | Translates the model pipeline's event dict into a `Prediction` |
 | `classifier.py` | `QueueSource` and `CallableSource` — where the model side plugs in |
 | `state.py` | Latch and bounded alert log |
 | `server.py` | Websocket transport |

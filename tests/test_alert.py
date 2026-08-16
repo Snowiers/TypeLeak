@@ -30,9 +30,12 @@ class TestAlertDecision(unittest.TestCase):
         self.assertEqual(severity, "moderate")
 
     def test_severity_ordering_across_the_range(self):
+        # Expressed relative to the constants so a recalibration cannot silently
+        # invalidate this test the way hardcoded values would.
+        midpoint = (RISK_THRESHOLD + CRITICAL_THRESHOLD) / 2
         observed = [
             decide_alert(risk, typing_detected=True)[1]
-            for risk in (0.0, 0.6, 0.9)
+            for risk in (0.0, midpoint, CRITICAL_THRESHOLD + 0.01)
         ]
         self.assertEqual(observed, ["none", "moderate", "critical"])
 

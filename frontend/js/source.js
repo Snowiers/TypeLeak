@@ -16,8 +16,10 @@ window.App = window.App || {};
   const CONNECT_TIMEOUT_MS = 1600;
 
   // Mirrors of the two backend constants (exposure/alert.py). Only used offline.
-  const RISK_THRESHOLD = 0.55;
-  const CRITICAL_THRESHOLD = 0.80;
+  // Keep these in step with alert.py — if they drift, the offline demo and the
+  // live backend disagree about what counts as an alert.
+  const RISK_THRESHOLD = 0.80;
+  const CRITICAL_THRESHOLD = 0.95;
 
   const VOCAB = "abcdefghijklmnopqrstuvwxyz ".split("");
   const TOP_K = 5;
@@ -68,10 +70,12 @@ window.App = window.App || {};
     else if (r < 0.75) regime = "usable";
     else regime = "ambiguous";
 
+    // Ranges straddle the 0.80 / 0.95 thresholds above — keep in step with
+    // FakeSource._distribution in exposure/source.py.
     let leader, tailSpread;
-    if (regime === "clean") { leader = rand(0.82, 0.97); tailSpread = 0.35; }
-    else if (regime === "usable") { leader = rand(0.55, 0.75); tailSpread = 0.7; }
-    else { leader = rand(0.22, 0.34); tailSpread = 1.0; }
+    if (regime === "clean") { leader = rand(0.965, 0.998); tailSpread = 0.35; }
+    else if (regime === "usable") { leader = rand(0.88, 0.96); tailSpread = 0.7; }
+    else { leader = rand(0.22, 0.60); tailSpread = 1.0; }
 
     const keys = sample(VOCAB, TOP_K);
     const tailW = [];

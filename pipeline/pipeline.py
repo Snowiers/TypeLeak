@@ -119,6 +119,11 @@ class AcousticGuardPipeline:
             "onset_strength": onset.strength,
             "predicted_key": label,
             "confidence": round(confidence, 3),
+            # Full class distribution as [label, probability] pairs, native floats.
+            # The dashboard's risk score is computed from the *shape* of this
+            # distribution, not from `confidence` alone, so a scalar is not enough.
+            # See exposure/bridge.py.
+            "key_probs": self._label_probabilities(probs),
             "below_confidence_threshold": below_confidence,
             "is_junk": is_junk,
             "snr_db": round(snr_db, 1),
@@ -127,6 +132,19 @@ class AcousticGuardPipeline:
             "model_trained": self.classifier.trained,
         }
         self.on_event(event)
+
+    def _label_probabilities(self, probs) -> list[list]:
+        """Pair the probability vector with its labels, as plain Python floats.
+
+        float() matters: torch/numpy scalars are not JSON-serializable, and this
+        event is forwarded over a websocket downstream.
+        """
+        idx_to_label = self.classifier.idx_to_label
+        return [
+            [idx_to_label[i], float(probs[i])]
+            for i in range(len(probs))
+            if i in idx_to_label
+        ]
 
     def run(self, audio_source) -> None:
         """Blocking call -- starts consuming from the given audio source

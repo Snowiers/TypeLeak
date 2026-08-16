@@ -20,6 +20,7 @@ nothing downstream changes.
 from __future__ import annotations
 
 import asyncio
+import threading
 from collections.abc import AsyncIterator, Awaitable, Callable
 
 from exposure.event import Prediction
@@ -49,12 +50,23 @@ class QueueSource:
         self._queue: asyncio.Queue[Prediction | None] = asyncio.Queue()
         self._max_backlog = max_backlog
         self._loop: asyncio.AbstractEventLoop | None = None
+        self._ready = threading.Event()
         self._dropped = 0
 
     @property
     def dropped(self) -> int:
         """Predictions discarded to backlog pressure. Worth logging during the demo."""
         return self._dropped
+
+    def wait_until_ready(self, timeout: float | None = None) -> bool:
+        """Block until the consuming event loop is bound. Returns True if it is.
+
+        Only needed when the producer lives on another thread — as it does when
+        an audio pipeline pushes into a server running in a background thread.
+        Submitting before the loop exists would touch the queue cross-thread
+        without `call_soon_threadsafe`, which is exactly the race this avoids.
+        """
+        return self._ready.wait(timeout)
 
     def submit_nowait(self, prediction: Prediction) -> None:
         """Enqueue from inside the event loop."""
@@ -87,6 +99,7 @@ class QueueSource:
 
     async def predictions(self) -> AsyncIterator[Prediction]:
         self._loop = asyncio.get_running_loop()
+        self._ready.set()
         while True:
             prediction = await self._queue.get()
             if prediction is None:

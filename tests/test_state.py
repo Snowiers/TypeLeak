@@ -3,13 +3,25 @@ import unittest
 from exposure.event import Prediction, assemble_event
 from exposure.state import ExposureState
 
-CONFIDENT = [("p", 0.93), ("o", 0.03), ("l", 0.02), ("i", 0.01), ("k", 0.01)]
-MODERATE = [("a", 0.80), ("s", 0.08), ("d", 0.05), ("f", 0.04), ("g", 0.03)]
+# Chosen to land in each severity band at the 0.80 / 0.95 thresholds in alert.py.
+# test_severity_fixtures_land_in_their_bands below pins that, so a recalibration
+# fails loudly here rather than silently weakening every test in this file.
+CONFIDENT = [("p", 0.995), ("o", 0.002), ("l", 0.001), ("i", 0.001), ("k", 0.001)]
+MODERATE = [("a", 0.93), ("s", 0.03), ("d", 0.02), ("f", 0.01), ("g", 0.01)]
 AMBIGUOUS = [("p", 0.22), ("o", 0.21), ("l", 0.20), ("i", 0.19), ("k", 0.18)]
 
 
 def event(topk):
     return assemble_event(Prediction(key_topk=topk))
+
+
+class TestSeverityFixtures(unittest.TestCase):
+    """Guards the fixtures above against a threshold change."""
+
+    def test_severity_fixtures_land_in_their_bands(self):
+        self.assertEqual(event(CONFIDENT).alert_severity, "critical")
+        self.assertEqual(event(MODERATE).alert_severity, "moderate")
+        self.assertEqual(event(AMBIGUOUS).alert_severity, "none")
 
 
 class TestExposureState(unittest.TestCase):

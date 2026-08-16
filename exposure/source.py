@@ -125,14 +125,18 @@ class FakeSource:
         way a real softmax output would. The regimes differ only in how much mass the
         leader takes and how flat the tail is.
         """
+        # Leader ranges are chosen so the three regimes straddle the alert
+        # thresholds in alert.py (0.80 / 0.95). Raising a threshold without
+        # raising these would make the top severity band unreachable and the
+        # panel would never demonstrate a critical alert.
         if regime == "clean":
-            leader = self._rng.uniform(0.82, 0.97)
+            leader = self._rng.uniform(0.965, 0.998)
             tail_spread = 0.35
         elif regime == "usable":
-            leader = self._rng.uniform(0.55, 0.75)
+            leader = self._rng.uniform(0.88, 0.96)
             tail_spread = 0.7
         else:
-            leader = self._rng.uniform(0.22, 0.34)
+            leader = self._rng.uniform(0.22, 0.60)
             tail_spread = 1.0
 
         keys = self._rng.sample(VOCAB, TOP_K)
