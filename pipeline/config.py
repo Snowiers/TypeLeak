@@ -78,7 +78,7 @@ ONSET_ANALYSIS_WINDOW_S = 1.0     # how far back each re-analysis looks
 ONSET_REANALYSIS_INTERVAL_S = 0.1  # how often we re-run analysis on new audio
 
 # --- Classifier ---
-MODEL_CHECKPOINT_PATH = os.path.expanduser("~/Documents/keylogging/dataset/runs/20260816_054252/best_model.pt")   # set to your best_model.pt path once ready
+MODEL_CHECKPOINT_PATH = None   # set to your best_model.pt path once ready
 
 # Fallback settings used ONLY when no real checkpoint is loaded (keeps the
 # pipeline testable without one). A real checkpoint overrides all of these
