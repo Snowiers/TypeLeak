@@ -97,7 +97,7 @@ audio path above.
 
 ---
 
-## 1. Server — on the DGX Spark
+## Quick Start 1. Server — on the DGX Spark
 
 ```bash
 cd backend
@@ -129,7 +129,7 @@ Find the Spark's LAN IP with: `hostname -I`
 
 ---
 
-## 2. Client — on the Mac
+## Quick Start 2. Client — on the Mac
 
 ```bash
 # first time only: install the light audio deps (no torch/model needed here)
@@ -177,7 +177,8 @@ the Mac.
 ---
 ## Datasets Used
 
-All data used to train the detection model was self-made, including 6,965 self-recorded keystrokes turned into spectograms. This can be found under backend/dataset/processed.
+All data used to train the detection model was self-made, including 6,965 self-recorded keystrokes turned into spectograms. This can be found under backend/dataset/processed. 
+Besides live inference, no other data was used.
 
 ## Known limitations
 
