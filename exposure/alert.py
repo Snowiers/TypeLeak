@@ -26,8 +26,8 @@ Severity = Literal["none", "moderate", "critical"]
 # PLACEHOLDERS. These are the only two tuning constants in the system and they need
 # calibration against real recordings once the model side lands. Both live here so
 # calibration is a two-line change.
-RISK_THRESHOLD = 0.55
-CRITICAL_THRESHOLD = 0.80
+RISK_THRESHOLD = 0.80
+CRITICAL_THRESHOLD = 0.95
 
 
 def decide_alert(
