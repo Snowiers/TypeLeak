@@ -2,9 +2,9 @@
    the centerpiece; light glass surfaces. No framework, no build step. */
 
 :root {
-  --ink: #edeef4;
-  --ink-dim: #9a9cb2;
-  --ink-faint: #63667e;
+  --ink: #f2f3f9;
+  --ink-dim: #c6c9da;
+  --ink-faint: #9da1b8;
 
   --glass-brd: rgba(255, 255, 255, 0.30);
   --glass-hi: rgba(255, 255, 255, 0.36);
@@ -39,25 +39,43 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* drifting, heavily-blurred streaks of colored light — the glassy backdrop */
-body::before {
+/* drifting, heavily-blurred streaks of colored light — the glassy backdrop.
+   Two layers with scattered (non-symmetric) blobs, each wandering on its own
+   path/speed, so the light feels organic instead of pinned to the corners. */
+body::before, body::after {
   content: "";
-  position: fixed; inset: -25%;
+  position: fixed; inset: -30%;
   z-index: 0; pointer-events: none;
-  background:
-    radial-gradient(38% 30% at 22% 26%, rgba(150, 110, 255, 0.55), transparent 62%),
-    radial-gradient(34% 40% at 80% 20%, rgba(80, 150, 255, 0.50), transparent 62%),
-    radial-gradient(44% 34% at 74% 80%, rgba(255, 110, 200, 0.48), transparent 62%),
-    radial-gradient(32% 30% at 26% 78%, rgba(120, 205, 255, 0.42), transparent 62%),
-    radial-gradient(30% 28% at 52% 50%, rgba(190, 120, 255, 0.34), transparent 65%);
-  filter: blur(72px) saturate(150%);
-  opacity: 0.62;
-  animation: aurora 26s ease-in-out infinite alternate;
+  filter: blur(70px) saturate(150%);
+  opacity: 0.55;
 }
-@keyframes aurora {
-  0%   { transform: translate3d(-2%, 0, 0)  scale(1)    rotate(0deg); }
-  50%  { transform: translate3d(2%, -3%, 0) scale(1.12) rotate(4deg); }
-  100% { transform: translate3d(-1%, 2%, 0) scale(1.08) rotate(-3deg); }
+body::before {
+  background:
+    radial-gradient(36% 30% at 18% 34%, rgba(150, 110, 255, 0.55), transparent 60%),
+    radial-gradient(30% 34% at 63% 12%, rgba(80, 150, 255, 0.50), transparent 60%),
+    radial-gradient(40% 30% at 88% 60%, rgba(255, 110, 200, 0.46), transparent 60%),
+    radial-gradient(28% 26% at 44% 72%, rgba(120, 205, 255, 0.40), transparent 62%);
+  animation: auroraA 24s ease-in-out infinite;
+}
+body::after {
+  background:
+    radial-gradient(34% 32% at 78% 30%, rgba(190, 120, 255, 0.48), transparent 60%),
+    radial-gradient(30% 30% at 34% 88%, rgba(120, 150, 255, 0.44), transparent 62%),
+    radial-gradient(38% 34% at 8% 66%, rgba(255, 130, 210, 0.40), transparent 62%),
+    radial-gradient(26% 26% at 58% 46%, rgba(160, 130, 255, 0.36), transparent 64%);
+  animation: auroraB 33s ease-in-out infinite;
+}
+@keyframes auroraA {
+  0%   { transform: translate3d(0, 0, 0)      scale(1)    rotate(0deg); }
+  33%  { transform: translate3d(5%, -4%, 0)   scale(1.10) rotate(5deg); }
+  66%  { transform: translate3d(-4%, 3%, 0)   scale(1.05) rotate(-4deg); }
+  100% { transform: translate3d(0, 0, 0)      scale(1)    rotate(0deg); }
+}
+@keyframes auroraB {
+  0%   { transform: translate3d(0, 0, 0)      scale(1.05) rotate(0deg); }
+  33%  { transform: translate3d(-5%, 4%, 0)   scale(1)    rotate(-6deg); }
+  66%  { transform: translate3d(4%, -3%, 0)   scale(1.12) rotate(4deg); }
+  100% { transform: translate3d(0, 0, 0)      scale(1.05) rotate(0deg); }
 }
 
 #stars { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
@@ -142,7 +160,7 @@ body::before {
 .keyboard-wrap { perspective: 1500px; display: flex; justify-content: center; }
 .keyboard {
   width: min(880px, 92vw);
-  display: flex; flex-direction: column; gap: 7px;
+  display: flex; flex-direction: column; gap: 8px;
   padding: 16px; border-radius: 26px;
   /* same glass material as the panels — just larger and tilted */
   background: linear-gradient(155deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04));
@@ -162,26 +180,28 @@ body::before {
   0%, 100% { transform: rotateX(9deg) translateY(0); }
   50%      { transform: rotateX(9deg) translateY(-8px); }
 }
-.kb-row { display: flex; gap: 6px; align-items: stretch; }
+.kb-row { display: flex; gap: 4px; align-items: stretch; }
 
 .key {
+  position: relative;
   flex: 1;
   display: flex; align-items: center; justify-content: center;
   height: 46px; min-width: 0;
-  font-family: var(--font); font-size: 14px; color: #f1f3f8;
-  border-radius: 12px;
-  /* clear glass keycap: bright specular top edge; picks up the light behind */
-  background: linear-gradient(158deg, rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0.08));
-  border: 1px solid rgba(255, 255, 255, 0.26);
+  font-family: var(--font); font-size: 14px; color: #f4f2ff;
+  border-radius: 13px;
+  /* cute pastel keycap: soft lavender top, crisp violet side-wall for clean depth */
+  background: linear-gradient(180deg, rgba(233,227,255,0.36), rgba(198,188,250,0.20));
+  border: 1px solid rgba(255,255,255,0.42);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.55),
-    inset 0 -7px 13px rgba(20, 20, 45, 0.2),
-    0 2px 6px rgba(0, 0, 0, 0.2);
-  transition: background .35s ease, box-shadow .3s ease,
-              transform .3s cubic-bezier(.2,.9,.2,1), color .3s ease, border-color .35s ease;
+    inset 0 1px 0 rgba(255,255,255,0.7),      /* crisp glossy top edge */
+    inset 0 -2px 2px rgba(150,120,220,0.22),
+    0 4px 0 rgba(128,103,198,0.65),           /* CRISP solid violet side wall (the height) */
+    0 5px 3px rgba(84,58,150,0.30);           /* tight violet grounding shadow, barely blurred */
+  transition: transform .09s cubic-bezier(.2,.9,.2,1), box-shadow .09s ease,
+              background .3s ease, color .3s ease, border-color .3s ease;
   --sev-c: var(--cool);
 }
-.row-fn .key { height: 26px; font-size: 10px; color: var(--ink-dim); }
+.row-fn .key { height: 30px; font-size: 10px; color: var(--ink-dim); }
 
 /* dual legends (number row, punctuation) */
 .key .sub { font-size: 9px; color: rgba(255, 255, 255, 0.5); line-height: 1; margin-bottom: 2px; }
@@ -195,25 +215,25 @@ body::before {
 .key.wide.r { justify-content: flex-end; padding-right: 12px; }
 
 /* arrow cluster */
-.arrows { display: flex; gap: 6px; align-items: stretch; }
+.arrows { display: flex; gap: 4px; align-items: stretch; }
 .arrows .arrow { flex: 1; font-size: 10px; color: var(--ink-dim); }
-.arrow-col { flex: 1; display: flex; flex-direction: column; gap: 6px; }
-.arrow-col .half { height: 20px; font-size: 8px; }
+.arrow-col { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.arrow-col .half { height: 21px; font-size: 8px; }
 
-/* flash on prediction: brightness = confidence (--i), tint = severity */
-/* every key press is lavender — confidence (--i) varies the shade/intensity,
-   not severity (that lives in the exposure panel instead) */
+/* pressed: the cap drops onto its wall (crisp), tints and glows lavender.
+   confidence (--i) sets the glow; severity lives in the exposure panel, not here. */
 .key.hit {
   color: #fff;
-  transform: translateY(-3px) scale(1.03);
-  background: linear-gradient(158deg,
-    color-mix(in srgb, var(--sev-c) calc(45% + var(--i, .5) * 35%), rgba(255,255,255,.18)),
-    rgba(255,255,255,.06));
-  border-color: var(--sev-c);
+  transform: translateY(3px);
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--sev-c) calc(45% + var(--i, .5) * 35%), rgba(255,255,255,0.28)),
+    color-mix(in srgb, var(--sev-c) 30%, rgba(255,255,255,0.12)));
+  border-color: color-mix(in srgb, var(--sev-c) 65%, white);
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.55),
-    0 0 calc(10px + var(--i, .5) * 26px) var(--sev-c),
-    0 0 calc(22px + var(--i, .5) * 44px) color-mix(in srgb, var(--sev-c) 55%, transparent);
+    inset 0 1px 0 rgba(255,255,255,0.75),
+    0 1px 0 rgba(128,103,198,0.65),        /* collapsed wall */
+    0 2px 3px rgba(84,58,150,0.30),
+    0 0 calc(10px + var(--i, .5) * 24px) var(--sev-c);
 }
 
 /* --- history (left) ----------------------------------------------------- */
@@ -244,6 +264,9 @@ body::before {
 .hist-time { font-family: var(--mono); font-size: 10px; color: var(--ink-faint); }
 .hist-text { font-family: var(--mono); font-size: 12px; color: var(--ink-dim); word-break: break-word; }
 .hist-empty { font-size: 11px; color: var(--ink-faint); text-align: center; padding: 14px 0; }
+
+/* keep side-panel text legible over the drifting colored light */
+.history, .exposure-panel { text-shadow: 0 1px 3px rgba(0, 0, 0, 0.35); }
 
 /* --- exposure panel (right) --------------------------------------------- */
 .exposure-panel {
